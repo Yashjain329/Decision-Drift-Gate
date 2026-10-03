@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "CHK-001",
+  "decision_id": "DEC-002",
+  "supersedes": "DEC-001",
+  "adapter": "python_job_client_v1",
+  "scenario": "commit_then_503",
+  "assertions": [
+    {"metric": "unique_jobs", "equals": 1},
+    {"metric": "returned_job_exists", "equals": true}
+  ],
+  "rationale": "A failed acknowledgement must not duplicate an accepted operation.",
+  "citations": [
+    {"decision_id": "DEC-002", "quote": "must not create duplicate jobs"}
+  ]
+}
