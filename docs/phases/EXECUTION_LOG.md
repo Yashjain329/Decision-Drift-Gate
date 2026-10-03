@@ -1,0 +1,26 @@
+# Decision Drift Gate Execution Log
+
+**Execution authorized:** 3 October 2026. **Starting source commit:** fb46bb1.
+
+The user requested parallel subagents. Implementation workers are explicitly dispatched with `gpt-6-luna`, fresh context, and disjoint file ownership. The requested orchestration/review setting is `gpt-6.1-sol` with High reasoning. Agent settings in this log describe explicit dispatch configuration rather than an unsupported claim about the main chat's hidden runtime.
+
+## Preflight and rulings
+
+- Python 3.12.4 and Git 2.51.0.windows.2 are available. Source checkout was clean before execution.
+- Parallel execution supersedes the previous single-worker sequencing instruction. Phases remain dependency-gated; independent components within a phase may run concurrently. Root serializes staging/commits to avoid shared Git index conflicts.
+- Phase 01 split: Git/fixtures (`git_foundation`), check schema (`check_contracts`), behavioral runner (`behavior_runner`). Workers read the same design and assigned detailed tasks. Source commits are made after integration, not concurrently by workers.
+- Decision records use string scope `src/job_client.py`, nullable string supersedes, status active/superseded, and string-list exceptions. This resolves an otherwise unspecified input shape before implementation.
+- Fixed check adapter/version is `python_job_client_v1`. Both duplicate count and completion assertions are mandatory. Missing evidence remains an error/incomplete result.
+- The model provider used by the application is separate from the Luna execution workers. No API access or model capture is assumed during Phase 01.
+
+## Verification
+
+Phase 01 accepted in commits `84546e6` and `2bd447b`. Independent fresh unittest discovery after review corrections passed all 34 tests in 29.644 seconds (exit 0). Phase 02 proposal and approval workers are dispatched in parallel with disjoint ownership. Worker handoffs retain actual RED/GREEN outcomes.
+
+## Phase 01 review dispositions
+
+- Sol High reproduced Windows default-codepage source corruption. Accepted as important: Git source decoding and worker JSON I/O must be explicit UTF-8, covered by a non-ASCII behavioral regression.
+- Successful adapter completion is mandatory independently of a candidate's assertions. A false completion assertion remains a rejected/ineligible draft rather than allowing an aborted operation to pass. This is documented in the design and tested.
+- Malformed worker status values must yield ERROR observations rather than TypeError. Add strict type checks before enum membership.
+- Dynamic import/execution mechanisms are outside the supported adapter vocabulary. Reject them explicitly; do not claim these AST checks sandbox malicious source.
+- Provider model listing succeeded using the locally configured key without displaying it; gemini-3.8-flash is available. This proves access, not a successful proposal capture.

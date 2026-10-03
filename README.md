@@ -2,7 +2,7 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status:** concrete design and implementation plan; application code and measured results are not yet available. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Planning date:** 3 October 2026.
+**Status:** foundation implemented and independently verified (34 tests); AI proposal and approval are in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Planning date:** 3 October 2026.
 
 ## What we will demonstrate
 
@@ -21,7 +21,7 @@ flowchart LR
 ## Read these first
 
 - [Phased execution roadmap](PHASES.md): five phases with GPT 6.1 Sol High orchestrating and GPT 6 Luna implementing.
-- [Phase status](docs/phases/STATUS.md): actual dispatch, review and completion evidence; currently all phases are planned.
+- [Phase status](docs/phases/STATUS.md): actual dispatch, review and completion evidence.
 - [Design specification](docs/superpowers/specs/2026-10-03-decision-drift-gate-design.md): scope, architecture, check format, approval, failure states, and evidence requirements.
 - [Implementation plan](docs/superpowers/plans/2026-10-03-decision-drift-gate.md): ordered tasks, interfaces, executable test examples, and release gates.
 - [Pitch and demo script](docs/PITCH_AND_DEMO.md): 20-second pitch, browser storyboard, longer walkthrough, and judge questions.

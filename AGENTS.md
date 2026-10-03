@@ -11,13 +11,13 @@ These are required settings for future execution, not a claim that writing these
 
 ## Execution authority and scope
 
-The current request creates phased planning documents. Do not treat it as an instruction to start writing application source. Once phase execution is requested, the orchestrator can dispatch, review, request fixes, and advance through the authorized phases without repeatedly asking for permission.
+The user has now requested execution and parallel subagents. The orchestrator can dispatch, review, request fixes, and advance through the authorized phases without repeatedly asking for permission.
 
 Use [PHASES.md](PHASES.md) as the execution roadmap, [the design](docs/superpowers/specs/2026-10-03-decision-drift-gate-design.md) as the behavior contract, and [the detailed plan](docs/superpowers/plans/2026-10-03-decision-drift-gate.md) for task-level code/test instructions. Phase documents organize that plan; they do not replace its requirements.
 
 ## Orchestrator responsibility
 
-Own scope, dependencies, task dispatch, interface decisions, review, acceptance, and status reporting. Review the actual diff and verification evidence before accepting a phase. Keep `docs/phases/STATUS.md` current. Dispatch one execution agent at a time because the phases share interfaces and test helpers. Use subagents within this chat rather than creating new sidebar chats.
+Own scope, dependencies, task dispatch, interface decisions, review, acceptance, and status reporting. Review the actual diff and verification evidence before accepting a phase. Keep `docs/phases/STATUS.md` current. Parallel Luna workers may implement independent parts of the current phase with disjoint file ownership and agreed interfaces. Dependent phases remain gated. Serialize Git staging/commits through the orchestrator while workers share the checkout. Use subagents within this chat rather than creating new sidebar chats.
 
 Delegate source implementation and routine fixes to GPT 6 Luna. If a design/interface change is needed, decide and document it before dispatching revised instructions. Never accept a phase solely because the execution agent reports completion.
 

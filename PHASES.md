@@ -16,7 +16,7 @@ The orchestrator decides what is ready to execute and reviews what was delivered
 | [04 Live browser demo](docs/phases/PHASE_04_LIVE_DEMO.md) | Real browser actions backed by the engine | 7 | Phase 03 accepted | Full lifecycle, honest mode labels, HTTP tests and browser inspection |
 | [05 Evaluation and submission](docs/phases/PHASE_05_EVALUATION_AND_SUBMISSION.md) | Verified evidence, pitch rehearsal, docs and source delivery | 8 | Phase 04 accepted | Fresh-checkout reproduction, measured case matrix and accurate submission |
 
-Phases run sequentially. Shared files such as `ddg/demo.py`, `ddg/contracts.py`, and `tests/support.py` are extended by the current phase only. No additional agent topology, infrastructure, or parallel implementation is needed.
+Phases run in dependency order. The user's execution instruction authorizes parallel GPT 6 Luna workers within a phase when ownership is disjoint and interfaces are agreed. Shared files such as `ddg/demo.py`, `ddg/contracts.py`, and `tests/support.py` have one owner at a time. The orchestrator serializes Git staging/commits in the shared checkout.
 
 ## Source of truth
 
