@@ -62,6 +62,21 @@ class WebServerTests(unittest.TestCase):
         self.assertTrue(token)
         return body["state"], token
 
+    def approve_and_run_regression(self):
+        _initial, token = self.state()
+        status, proposed, _ = self.request("POST", "/api/propose", {"mode": "recorded"}, token=token)
+        self.assertEqual(status, 200, proposed)
+        draft = proposed["state"]["draft"]
+        status, validated, _ = self.request("POST", "/api/validate", {"draft_digest": draft["draft_digest"]}, token=token)
+        self.assertEqual(status, 200, validated)
+        status, approved, _ = self.request("POST", "/api/approve", {
+            "draft_digest": draft["draft_digest"], "reviewer": "Local reviewer", "reason": "Verify approval state",
+        }, token=token)
+        self.assertEqual(status, 200, approved)
+        status, result, _ = self.request("POST", "/api/run", {"scenario": "regression"}, token=token)
+        self.assertEqual(status, 200, result)
+        return result["state"], token
+
     def test_html_injects_escaped_per_server_session_token_and_serves_only_named_assets(self):
         status, body, headers = self.request("GET", "/")
         self.assertEqual(status, 200)
@@ -182,6 +197,35 @@ class WebServerTests(unittest.TestCase):
         refreshed, _ = self.state()
         self.assertEqual(refreshed["lifecycle"], original["lifecycle"])
         self.assertIsNone(refreshed["draft"])
+
+    def test_approved_demo_rejects_propose_and_validate_without_changing_report_state(self):
+        before, token = self.approve_and_run_regression()
+        digest = before["draft"]["draft_digest"]
+        validation_status, _, _ = self.request("POST", "/api/validate", {"draft_digest": digest}, token=token)
+        propose_status, _, _ = self.request("POST", "/api/propose", {"mode": "recorded"}, token=token)
+        after, _ = self.state()
+        self.assertEqual(validation_status, 409)
+        self.assertEqual(propose_status, 409)
+        self.assertEqual(after, before)
+
+    def test_activated_demo_restores_verified_approval_when_saved_state_hides_it(self):
+        before, _token = self.approve_and_run_regression()
+        saved_path = self.state_dir / "session.json"
+        saved = json.loads(saved_path.read_text(encoding="utf-8"))
+        saved["state"]["approval"] = None
+        saved_path.write_text(json.dumps(saved), encoding="utf-8")
+
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=3)
+        self.server = create_server(self.repo, self.state_dir, port=0)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.host, self.port = self.server.server_address[:2]
+        recovered, _ = self.state()
+        self.assertIsNotNone(recovered["approval"])
+        self.assertEqual(recovered["draft"], recovered["validation"]["proposal"])
+        self.assertEqual(recovered["approval"], before["approval"])
 
     def test_report_staleness_tracks_live_ref_names(self):
         _, token = self.state()

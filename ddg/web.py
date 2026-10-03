@@ -162,28 +162,28 @@ def _load_saved_state(server: ThreadingHTTPServer, metadata: dict) -> None:
         if set(record) != {"repo", "state"} or record["repo"] != str(server.ddg_repo):
             return
         state = _safe_state(record["state"])
-        if state["approval"] is not None:
+        if metadata.get("approved_base"):
+            # The pinned repository bundle is authoritative. An unapproved local
+            # session must not hide it after restart.
+            canonical = _initial_state(server.ddg_repo, metadata)
+            if canonical["approval"] is None or state["approval"] is None:
+                return
             draft = state["draft"]
             validation = state["validation"]
-            if not isinstance(draft, dict) or not isinstance(validation, dict):
-                return
             bundle = _load_approved(server.ddg_repo, metadata)
-            # Fresh demos can keep a local approval before activation only while its
-            # exact validation proposal remains intact. Activated bundles are pinned
-            # and reverified from the repository on every server start.
-            if metadata.get("approved_base"):
-                if (not bundle or bundle[2] != validation or bundle[3] != state["approval"]
-                        or draft != validation.get("proposal")
-                        or state["mode"] != draft.get("proposal_mode")
-                        or state["new_decision"] != bundle[1]):
-                    return
-                canonical = _initial_state(server.ddg_repo, metadata)
-                if state["old_decision"] != canonical["old_decision"]:
-                    return
-            else:
-                # The UI's approval action always activates a generated demo before
-                # reporting success. Self-reported local eligibility alone is not authority.
+            if (not isinstance(draft, dict) or not isinstance(validation, dict) or not bundle
+                    or bundle[2] != validation or bundle[3] != state["approval"]
+                    or draft != validation.get("proposal")
+                    or state["mode"] != draft.get("proposal_mode")
+                    or state["new_decision"] != bundle[1]
+                    or state["old_decision"] != canonical["old_decision"]):
                 return
+            # Only retain session details once they match the verified repository
+            # approval. Otherwise the canonical approval state remains in memory.
+        elif state["approval"] is not None:
+            # A local attestation without an activated repository bundle is not
+            # authority across server restarts.
+            return
         state["scenarios"] = _scenario_list(metadata.get("refs", {})) if state["approval"] else []
         state["busy"] = False
         server.ddg_state = state
@@ -388,6 +388,9 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
             state = copy.deepcopy(self.server.ddg_state)
             metadata = _json_read(repo / ".ddg-demo.json")
             refs = metadata.get("refs", {})
+            if (path in {"/api/propose", "/api/validate"}
+                    and (metadata.get("approved_base") or state.get("approval") is not None)):
+                raise _RequestError(409, "This demo already has an approved check")
             if path == "/api/propose":
                 if set(body) != {"mode"}:
                     raise _RequestError(400, "Proposal request must contain only mode")

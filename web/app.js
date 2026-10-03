@@ -194,9 +194,27 @@
     scenarios.forEach((scenario) => {
       select.append(new Option(scenario.label || scenario.id, scenario.id));
     });
+    const reportScenario = scenarioIdForReport(data.report, scenarios);
     if (prior && scenarios.some((scenario) => scenario.id === prior)) select.value = prior;
+    else if (reportScenario) select.value = reportScenario;
     select.disabled = state.busy || !data.approval || scenarios.length === 0;
     byId('run-button').disabled = state.busy || !data.approval || scenarios.length === 0;
+  }
+
+  function scenarioIdForReport(report, scenarios) {
+    const aliases = {
+      'unseen-regression': 'unseen_regression',
+      'approved-abort': 'abort',
+      'approved-crashing': 'crashing',
+      'approved-timing-out': 'timing_out',
+      'approved-missing-entrypoint': 'missing_entrypoint',
+      'policy-edit': 'policy_edit',
+      'preexisting-head': 'preexisting_failure'
+    };
+    const head = report?.head_ref;
+    if (typeof head !== 'string') return null;
+    const id = aliases[head] || head;
+    return scenarios.some((item) => item.id === id) ? id : null;
   }
 
   function eventLabel(event) {
@@ -218,7 +236,10 @@
   function renderReport(data) {
     const report = data.report;
     const stale = data.report_stale === true;
-    safeText(byId('report-freshness'), report ? (stale ? 'STALE · Rerun required' : 'Current run') : 'Not run');
+    safeText(byId('report-freshness'), report ? (stale ? 'STALE · Rerun required' : `Current · ${report.aggregate || 'complete'}`) : 'Not run');
+    const scenario = scenarioIdForReport(report, Array.isArray(data.scenarios) ? data.scenarios : []);
+    const scenarioLabel = data.scenarios?.find((item) => item.id === scenario)?.label;
+    safeText(byId('report-case'), scenarioLabel ? `Report for ${scenarioLabel}` : 'No report candidate');
     byId('report-freshness').classList.toggle('freshness-stale', Boolean(report && stale));
     visible(byId('stale-notice'), Boolean(report && stale));
     visible(byId('empty-review'), !report);
@@ -231,9 +252,10 @@
     const check = checks.find((entry) => entry.verdict !== 'HISTORICAL_CHECK_IGNORED') || checks[0] || {};
     const head = check.head || {};
     const base = check.base || {};
-    const verdict = stale ? 'STALE' : check.verdict || report.aggregate || 'NOT_CHECKED';
+    const verdict = stale ? 'STALE' : report.aggregate === 'INCOMPLETE' ? 'INCOMPLETE' : check.verdict || report.aggregate || 'NOT_CHECKED';
     safeText(byId('verdict'), verdict);
-    byId('verdict').className = `verdict-text verdict-${toneForVerdict(check.verdict || report.aggregate)}`;
+    byId('verdict').className = `verdict-text verdict-${toneForVerdict(verdict)}`;
+    const warningCodes = new Set((Array.isArray(report.warnings) ? report.warnings : []).map((warning) => warning?.code));
     const summary = {
       VIOLATION_INTRODUCED: 'The candidate newly violates this approved behavior.',
       PRE_EXISTING_FAILURE: 'This failure already exists in the target revision.',
@@ -241,7 +263,16 @@
       CHECK_PASSED: 'The approved check passed on both revisions.',
       NOT_CHECKED: 'Execution did not establish a result for both revisions.'
     };
-    safeText(byId('verdict-summary'), stale ? 'This report is bound to earlier revisions. Rerun required.' : summary[check.verdict] || 'The aggregate includes the report findings.');
+    const incompleteSummary = warningCodes.has('POLICY_REVIEW_REQUIRED')
+      ? 'The candidate changes approved policy; review is required before this result can be green.'
+      : warningCodes.has('MISSING_APPROVED_COVERAGE') || warningCodes.has('NO_ACTIVE_APPROVED_CHECKS')
+        ? 'Required active decision coverage is missing from the approved target.'
+        : warningCodes.has('EXECUTION_ERROR') || warningCodes.has('AUTHORITY_UNAVAILABLE')
+          ? 'Execution or authority evidence is incomplete; inspect the report details.'
+          : 'Required evidence is incomplete; inspect the report details.';
+    safeText(byId('verdict-summary'), stale ? 'This report is bound to earlier revisions. Rerun required.'
+      : report.aggregate === 'INCOMPLETE' ? incompleteSummary
+        : summary[check.verdict] || 'The aggregate includes the report findings.');
     const jobs = head.unique_jobs;
     const events = Array.isArray(head.events) ? head.events : [];
     const operationIds = new Set(events.map((event) => event?.operation_id).filter((id) => typeof id === 'string' && id));
