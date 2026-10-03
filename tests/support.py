@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import copy
 import json
+import subprocess
 from pathlib import Path
 
 from ddg.approval import approve, validate_draft
 from ddg.contracts import digest
 from ddg.demo import build_demo
+from ddg.gitio import resolve_commit
 from ddg.proposal import load_context, wrap_draft
 
 
@@ -37,3 +39,26 @@ def make_approved_demo(destination: Path) -> dict:
     refs = approval.get("refs", demo["refs"])
     return {"repo": str(repo), "refs": refs, "approval": approval, "draft": draft,
             "validation": validation}
+
+
+def commit_fixture(repo: Path, parent: str, files: dict[str, str | None], message: str) -> str:
+    """Commit a test-only variant without touching any source checkout."""
+    repo = Path(repo).resolve()
+    subprocess.run(["git", "-C", str(repo), "checkout", "--quiet", "--detach", parent],
+                   check=True, capture_output=True, text=True, encoding="utf-8")
+    for relative, content in files.items():
+        target = (repo / relative).resolve()
+        if not target.is_relative_to(repo):
+            raise ValueError("Fixture path escaped its generated repository")
+        if content is None:
+            subprocess.run(["git", "-C", str(repo), "rm", "--quiet", "--ignore-unmatch", "--", relative],
+                           check=True, capture_output=True, text=True, encoding="utf-8")
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8", newline="\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True,
+                   text=True, encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "-c", "user.name=DDG Test", "-c",
+                    "user.email=ddg-test@example.invalid", "commit", "--quiet", "-m", message],
+                   check=True, capture_output=True, text=True, encoding="utf-8")
+    return resolve_commit(repo, "HEAD")

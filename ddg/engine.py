@@ -1,0 +1,301 @@
+"""Pinned, base-authorized comparison of approved behavioral checks."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from .approval import verify_bundle
+from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
+from .gitio import changed_paths_at, diff_at, list_at, read_at, resolve_commit
+from .harness import observe, observe_happy_path
+from .proposal import validate_citations
+
+RUNNER_TIMEOUT_SECONDS = 10.0
+_VERDICTS = {
+    ("PASS", "FAIL"): "VIOLATION_INTRODUCED",
+    ("FAIL", "FAIL"): "PRE_EXISTING_FAILURE",
+    ("FAIL", "PASS"): "RESOLVED",
+    ("PASS", "PASS"): "CHECK_PASSED",
+}
+_ERROR_OBSERVATION_FIELDS = {
+    "status": "ERROR",
+    "unique_jobs": None,
+    "returned_job_exists": None,
+    "returned_job_id": None,
+    "submit_calls": None,
+    "events": [],
+}
+
+
+def _observation_error(message: str) -> dict:
+    return {**_ERROR_OBSERVATION_FIELDS, "events": [], "error": message}
+
+
+def _verdict(base: dict, head: dict) -> str:
+    if base.get("status") == "ERROR" or head.get("status") == "ERROR":
+        return "NOT_CHECKED"
+    return _VERDICTS.get((base.get("status"), head.get("status")), "NOT_CHECKED")
+
+
+def _read_json(repo: Path, revision: str, path: str) -> Any:
+    try:
+        return json.loads(read_at(repo, revision, path))
+    except (ValueError, json.JSONDecodeError, TypeError, UnicodeError) as exc:
+        raise ValueError(f"Could not read JSON artifact at {path}") from exc
+
+
+def _policy_changed(repo: Path, base_sha: str, head_sha: str) -> bool | None:
+    try:
+        return any(path == ".ddg" or path.startswith(".ddg/")
+                   for path in changed_paths_at(repo, base_sha, head_sha))
+    except (OSError, ValueError, UnicodeError):
+        # If policy state at head cannot be read, the result cannot be green.
+        return None
+
+
+def _warning(code: str, message: str) -> dict[str, str]:
+    return {"code": code, "message": message}
+
+
+def _empty_check_entry(check_id: str, error: str, diff: str) -> dict:
+    return {
+        "check_id": check_id,
+        "verdict": "NOT_CHECKED",
+        "base": _observation_error(error),
+        "head": _observation_error(error),
+        "decision": None,
+        "check": None,
+        "check_digest": None,
+        "approval": None,
+        "validation": None,
+        "diff": diff,
+        "error": error,
+    }
+
+
+def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[dict], bool, list[dict]]:
+    """Load and validate all authority from base; return eligible checks and coverage state."""
+    decision_paths = list_at(repo, base_sha, ".ddg/decisions")
+    check_paths = list_at(repo, base_sha, ".ddg/checks")
+    validation_paths = list_at(repo, base_sha, ".ddg/validations")
+    approval_paths = list_at(repo, base_sha, ".ddg/approvals")
+
+    decisions: dict[str, dict] = {}
+    raw_decisions: list[dict] = []
+    graph_error: str | None = None
+    try:
+        for path in decision_paths:
+            record = _read_json(repo, base_sha, path)
+            if (not isinstance(record, dict) or Path(path).stem != record.get("id")
+                    or path != f".ddg/decisions/{record.get('id')}.json"):
+                raise ValueError(f"Decision path does not match record id: {path}")
+            raw_decisions.append(record)
+        decisions = validate_decisions(raw_decisions)
+    except (ValueError, TypeError, KeyError) as exc:
+        graph_error = str(exc) or "Decision graph is invalid"
+        warnings.append(_warning("INVALID_DECISION_GRAPH", graph_error))
+
+    by_artifact: dict[str, dict] = {}
+    for paths, folder, label in (
+        (validation_paths, ".ddg/validations", "validation"),
+        (approval_paths, ".ddg/approvals", "approval"),
+    ):
+        for path in paths:
+            identifier = Path(path).stem
+            try:
+                record = _read_json(repo, base_sha, path)
+                if (not isinstance(record, dict) or record.get("check_id") != identifier
+                        or path != f"{folder}/{identifier}.json"):
+                    raise ValueError(f"{label.title()} path does not match its check id: {path}")
+                by_artifact[f"{folder}/{identifier}.json"] = record
+            except (ValueError, TypeError, KeyError) as exc:
+                warnings.append(_warning("INVALID_APPROVAL_BUNDLE", str(exc)))
+
+    active_decisions = {key: record for key, record in decisions.items() if record["status"] == "active"}
+    decision_evidence = list(active_decisions.values()) if not graph_error else [
+        record for record in raw_decisions
+        if isinstance(record, dict) and record.get("status") == "active"
+    ]
+    entries: list[dict] = []
+    covered: set[str] = set()
+    incomplete = graph_error is not None
+    for path in check_paths:
+        check_id = Path(path).stem
+        try:
+            check = validate_check(_read_json(repo, base_sha, path))
+            if check["id"] != check_id or path != f".ddg/checks/{check_id}.json":
+                raise ValueError(f"Check path does not match record id: {path}")
+            decision = decisions.get(check["decision_id"])
+            if graph_error:
+                raise ValueError("Decision graph is invalid")
+            if decision is None:
+                raise ValueError("Check names a missing base decision")
+            if decision["status"] == "superseded":
+                historical = {
+                    "check_id": check_id,
+                    "verdict": "HISTORICAL_CHECK_IGNORED",
+                    "base": None,
+                    "head": None,
+                    "decision": decision,
+                    "check": check,
+                    "check_digest": digest(check),
+                    "approval": by_artifact.get(f".ddg/approvals/{check_id}.json"),
+                    "validation": by_artifact.get(f".ddg/validations/{check_id}.json"),
+                    "diff": "",
+                    "error": None,
+                    "_authorized": False,
+                }
+                entries.append(historical)
+                warnings.append(_warning(
+                    "HISTORICAL_CHECK_IGNORED",
+                    f"{check_id} names superseded decision {decision['id']} and was not executed.",
+                ))
+                continue
+            validate_citations(check, decisions)
+            validation_path = f".ddg/validations/{check_id}.json"
+            approval_path = f".ddg/approvals/{check_id}.json"
+            validation = by_artifact.get(validation_path)
+            approval = by_artifact.get(approval_path)
+            if validation is None or approval is None:
+                raise ValueError("Approved check is missing its validation or approval record")
+            if not verify_bundle(check, decision, validation, approval):
+                raise ValueError("Approved check bundle digest or calibration evidence is invalid")
+            entry = {
+                "check_id": check_id,
+                "verdict": "NOT_CHECKED",
+                "base": None,
+                "head": None,
+                "decision": decision,
+                "check": check,
+                "check_digest": digest(check),
+                "approval": approval,
+                "validation": validation,
+                "diff": "",
+                "error": None,
+                "_authorized": True,
+            }
+            entries.append(entry)
+            covered.add(decision["id"])
+        except (ValueError, TypeError, KeyError) as exc:
+            incomplete = True
+            message = str(exc) or "Approved check authority is invalid"
+            warnings.append(_warning("INVALID_APPROVAL_BUNDLE", f"{check_id}: {message}"))
+            entry = _empty_check_entry(check_id, message, "")
+            entry["_authorized"] = False
+            # Preserve whatever base artifacts can safely be represented for review.
+            try:
+                candidate = _read_json(repo, base_sha, path)
+                if isinstance(candidate, dict):
+                    entry["check"] = candidate
+                    entry["check_digest"] = digest(candidate)
+                    decision_id = candidate.get("decision_id")
+                    entry["decision"] = decisions.get(decision_id)
+                    entry["validation"] = by_artifact.get(f".ddg/validations/{check_id}.json")
+                    entry["approval"] = by_artifact.get(f".ddg/approvals/{check_id}.json")
+            except (ValueError, TypeError):
+                pass
+            entries.append(entry)
+
+    missing_coverage = sorted(set(active_decisions) - covered)
+    if missing_coverage:
+        incomplete = True
+        warnings.append(_warning(
+            "MISSING_APPROVED_COVERAGE",
+            "Active base decisions lack an approved check: " + ", ".join(missing_coverage),
+        ))
+    if not entries:
+        incomplete = True
+        warnings.append(_warning("NO_ACTIVE_APPROVED_CHECKS", "No active approved checks were found in base."))
+    if not covered:
+        incomplete = True
+        if entries:
+            warnings.append(_warning("NO_ACTIVE_APPROVED_CHECKS", "No approved checks govern an active decision in base."))
+    return entries, incomplete, decision_evidence
+
+
+def compare(repo: Path, base: str, head: str) -> dict:
+    """Compare two pinned revisions using only base's validated approved checks."""
+    repo = Path(repo).expanduser().resolve()
+    base_sha = resolve_commit(repo, base)
+    head_sha = resolve_commit(repo, head)
+    warnings: list[dict[str, str]] = []
+    changed_policy = _policy_changed(repo, base_sha, head_sha)
+    if changed_policy is True:
+        warnings.append(_warning(
+            "POLICY_REVIEW_REQUIRED",
+            "Head changes .ddg policy artifacts; authority remains pinned to base.",
+        ))
+    elif changed_policy is None:
+        warnings.append(_warning(
+            "POLICY_STATE_UNAVAILABLE",
+            "Could not determine whether head changed .ddg policy artifacts.",
+        ))
+    try:
+        changed_lines = diff_at(repo, base_sha, head_sha)
+        diff_unavailable = False
+    except (ValueError, OSError, UnicodeError) as exc:
+        changed_lines = ""
+        diff_unavailable = True
+        warnings.append(_warning("DIFF_UNAVAILABLE", f"Could not read source diff: {type(exc).__name__}"))
+
+    try:
+        entries, authority_incomplete, active_decisions = _authority(repo, base_sha, warnings)
+    except (OSError, ValueError, UnicodeError) as exc:
+        authority_incomplete = True
+        entries = []
+        active_decisions = []
+        warnings.append(_warning("AUTHORITY_UNAVAILABLE", f"Could not load base policy artifacts: {type(exc).__name__}"))
+    for entry in entries:
+        authorized = entry.pop("_authorized", False)
+        check = entry.get("check")
+        if not authorized or not isinstance(check, dict) or not entry.get("approval") or not entry.get("validation"):
+            entry["diff"] = changed_lines
+            continue
+        try:
+            entry["base"] = observe(repo, base_sha, check, timeout=RUNNER_TIMEOUT_SECONDS)
+        except Exception as exc:
+            entry["base"] = _observation_error(f"Base execution failed: {type(exc).__name__}")
+        try:
+            entry["head"] = observe(repo, head_sha, check, timeout=RUNNER_TIMEOUT_SECONDS)
+        except Exception as exc:
+            entry["head"] = _observation_error(f"Head execution failed: {type(exc).__name__}")
+        entry["verdict"] = _verdict(entry["base"], entry["head"])
+        entry["diff"] = changed_lines
+        if entry["verdict"] == "NOT_CHECKED":
+            warnings.append(_warning("EXECUTION_ERROR", f"{entry['check_id']} could not be evaluated on both revisions."))
+
+    ordinary_tests = {
+        "base": observe_happy_path(repo, base_sha, timeout=RUNNER_TIMEOUT_SECONDS),
+        "head": observe_happy_path(repo, head_sha, timeout=RUNNER_TIMEOUT_SECONDS),
+    }
+    ordinary_error = any(item["status"] == "ERROR" for item in ordinary_tests.values())
+    if ordinary_error:
+        warnings.append(_warning("ORDINARY_TEST_ERROR", "The no-fault submission observation errored on at least one revision."))
+
+    verdicts = [entry["verdict"] for entry in entries if entry["verdict"] != "HISTORICAL_CHECK_IGNORED"]
+    if changed_policy is not False or diff_unavailable or authority_incomplete or ordinary_error or "NOT_CHECKED" in verdicts:
+        aggregate = "INCOMPLETE"
+    elif any(verdict in {"VIOLATION_INTRODUCED", "PRE_EXISTING_FAILURE"} for verdict in verdicts):
+        aggregate = "FAILED"
+    elif verdicts and all(verdict in {"CHECK_PASSED", "RESOLVED"} for verdict in verdicts):
+        aggregate = "PASSED_CHECKS"
+    else:
+        aggregate = "INCOMPLETE"
+
+    return {
+        "aggregate": aggregate,
+        "base_sha": base_sha,
+        "head_sha": head_sha,
+        "checks": entries,
+        "active_decisions": active_decisions,
+        "warnings": warnings,
+        "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "adapter_version": ADAPTER_VERSION,
+        "ordinary_tests": ordinary_tests,
+    }
+
+
+__all__ = ["compare"]

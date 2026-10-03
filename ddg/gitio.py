@@ -75,3 +75,11 @@ def diff_at(repo: Path, base_sha: str, head_sha: str) -> str:
     base = _require_sha(base_sha)
     head = _require_sha(head_sha)
     return _git(Path(repo), "diff", "--unified=3", base, head, "--", "src/job_client.py")
+
+
+def changed_paths_at(repo: Path, base_sha: str, head_sha: str) -> list[str]:
+    """Return paths changed between two full revisions, including mode changes."""
+    base = _require_sha(base_sha)
+    head = _require_sha(head_sha)
+    output = _git(Path(repo), "-c", "core.quotePath=false", "diff", "--name-only", "--no-renames", base, head, "--")
+    return [path for path in output.splitlines() if path]
