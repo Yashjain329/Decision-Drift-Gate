@@ -1,0 +1,8 @@
+.ddg-demo*/
+.ddg-state/
+.ddg-evaluation/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
