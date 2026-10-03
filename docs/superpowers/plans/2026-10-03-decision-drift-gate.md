@@ -1,6 +1,6 @@
 # Decision Drift Gate Implementation Plan
 
-> **For agentic workers:** Use superpowers:executing-plans to implement this plan task by task in the current session. The user delegated planning choices; no subagent execution method has been requested. Steps use checkbox syntax. This document is a plan, not executed source or test evidence.
+> **For agentic workers:** Follow [the phased roadmap](../../../PHASES.md): GPT 6.1 Sol High orchestrates and reviews; GPT 6 Luna implements the assigned phase. Use superpowers:executing-plans for the phase's detailed tasks. Steps use checkbox syntax. This document is a plan, not executed source or test evidence.
 
 **Goal:** demonstrate a real AI proposal becoming a developer-approved behavioral check that catches a later regression and explains the governing decision.
 
@@ -68,6 +68,7 @@ tests/
   test_engine.py
   test_cli.py
   test_web.py
+  test_evaluate.py
 examples/
   manual_check.json    disclosed hand-authored schema example
 evidence/
@@ -393,7 +394,7 @@ sessionToken is provided in the initial served page, not hardcoded. renderState 
 
 ## Task 8: Evaluate the proof and prepare the submission
 
-**Files:** create scripts/evaluate.py, evidence/README.md, docs/EVALUATION.md, docs/ARCHITECTURE.md; update README.md, docs/PITCH_AND_DEMO.md, docs/DELIVERY_CHECKLIST.md; add the verified real capture with sanitized metadata.
+**Files:** create scripts/evaluate.py, tests/test_evaluate.py, evidence/README.md, docs/EVALUATION.md, docs/ARCHITECTURE.md; update README.md, docs/PITCH_AND_DEMO.md, docs/DELIVERY_CHECKLIST.md; add the verified real capture with sanitized metadata.
 
 **Interfaces:** consumes compare and approved demo refs; produces case_results.json and timing.csv under an ignored output directory. Curated sanitized summaries can be committed under evidence after review.
 
