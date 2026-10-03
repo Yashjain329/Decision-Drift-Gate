@@ -114,6 +114,8 @@ Each observed result includes status, unique_jobs, returned_job_exists, returned
 
 All active approved checks run on both versions, even for an unrelated diff. This deliberately prioritizes completeness over optimization for the single-adapter prototype. If an active decision lacks an approved check, aggregate coverage is incomplete.
 
+Execution ruling: a schema-valid check with a matching filename that references an existing superseded decision is historical. Retain it with a nonblocking HISTORICAL_CHECK_IGNORED warning and do not execute it. Active successor coverage is still mandatory; a missing successor approval makes coverage incomplete. Malformed checks or references to missing decisions remain incomplete rather than being assumed historical. All these classifications use the pinned base graph.
+
 ## 8. Result contract
 
 | Base check | Head check | Per-check result | Meaning |

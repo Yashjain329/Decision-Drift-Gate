@@ -32,3 +32,7 @@ Real proposal capture succeeded at `2026-10-03T18:19:56.974766Z` using Gemini `g
 Review tightened citations to the two actual provider input decisions and preserved the sanitized captured response in replay. Approval review corrected strict schema/observation types, provenance validation and generic check-ID activation. Local reviewer names are attestation labels, not authenticated identities or human participant evidence.
 
 Phase 02 accepted after independent Sol review and root's fresh full suite: 70 tests passed in 139.355 seconds. Delivered commits `e3147be` and `03916d4`. Phase 03 dispatched parallel Luna engine and CLI/report workers; root retains README/status/docs ownership.
+
+Phase 03 ruling: schema/path-valid checks for existing superseded decisions are historical and skipped with a nonblocking warning. Active successor coverage remains mandatory. Missing decisions or malformed checks remain incomplete. This is classification from the pinned base, not permission for a head policy edit to retire its own check.
+
+Phase 03 accepted in `bfbe1d2` and `ff631c4` after independent Sol review and root's fresh 96-test suite (200.840 seconds, exit 0). Root's recorded-Gemini CLI reveal returned 1→2 jobs, ordinary PASS/PASS, introduced violation, exit 1; one observed invocation took 1.432 seconds. Phase 04 Luna workers own server/HTTP tests and browser assets separately.
