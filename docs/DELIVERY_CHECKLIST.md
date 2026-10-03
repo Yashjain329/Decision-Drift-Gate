@@ -1,21 +1,21 @@
 # Decision Drift Gate Team Delivery Checklist
 
-**Date:** 3 October 2026. **Next-round deliverables confirmed by user:** live demo, documentation, GitHub source. **Deadline and team size:** not supplied; sequence work through the gates below.
+**Updated:** 4 October 2026. **Next-round deliverables confirmed by user:** live demo, documentation, GitHub source. **Deadline and team size:** not supplied. [Phase status](phases/STATUS.md) distinguishes technical delivery from pending human rehearsal/evaluation.
 
 ## Definition of done
 
 - [ ] A fresh checkout can build the synthetic history and start the local browser using documented commands.
-- [ ] A real AI call has produced a schema-valid, grounded proposal; its sanitized capture and input digest are inspectable.
-- [ ] A developer explicitly approves the exact check after bad/good/exception calibration.
-- [ ] The blind-retry and unseen helper-based regressions fail; reconciliation and stable-key exception pass.
-- [ ] Silent abort fails; unapproved policy changes and missing authority produce incomplete results.
-- [ ] The report separates newly introduced, preexisting, and resolved failures.
-- [ ] Ordinary-test badges are based on real execution, and reports include exact revisions and check identity.
-- [ ] The fast reveal is fresh execution with a previously approved check, labeled honestly.
-- [ ] The longer walkthrough shows proposal, validation, approval, and execution.
-- [ ] Offline mode runs approved checks and labels recorded proposal provenance.
-- [ ] Standard-library tests and the browser walkthrough pass on the presentation machine.
-- [ ] Documentation states supported adapter, limitations, measured outcomes, and actual tested versions.
+- [x] A real AI call produced a schema-valid grounded proposal; sanitized capture and input digest are inspectable. A later browser Live retry timed out honestly.
+- [x] Explicit exact-check approval workflow verified after bad/good/exception calibration, using a labeled Codex integration attestation. A presenter should review the check and supply their own attestation in their fresh walkthrough.
+- [x] Blind-retry and unseen helper regressions fail; reconciliation and stable-key exception pass.
+- [x] Silent abort fails; policy edits, missing authority and forged approvals remain incomplete.
+- [x] The report separates newly introduced, preexisting, and resolved failures.
+- [x] Ordinary-test badges come from real execution; reports include exact revisions and check identity.
+- [x] Fast reveal executes fresh with an honestly disclosed previously approved check.
+- [x] Actual browser walkthrough verified proposal, validation, approval and execution. Timed speaking/video rehearsal remains pending.
+- [x] Offline generation/execution work with explicit Recorded provenance.
+- [x] Standard-library suite passes: 110 tests in 280.603 seconds. Actual browser walkthrough verified on this Windows machine; recheck the final presentation machine if different.
+- [x] Documentation states supported adapter, limitations, actual case outcomes and tested versions.
 - [ ] Source and documentation are present in the configured GitHub repository and reproducible from its remote commit.
 
 ## Ownership
@@ -39,6 +39,8 @@ For reviewer comparison, record reviewer_id, condition, task_id, order, setup_se
 
 The original 50% reduction is a target. Publish raw times/sample size and preliminary observations before a general saving claim. No participant counts, measured results, provider costs, or willingness-to-pay claims are invented.
 
+The independent automated matrix matched all 15 expected outcomes on clean source `c3feee81c6403361e449ec677accf97a7e27d899`. [Raw case evidence](../evidence/case-results.json) preserves errors and warnings. Human sample size is zero; the reviewer CSV has headers only, and five speaking rehearsals/video recording remain pending.
+
 ## Required repository documentation
 
 | Document | Must answer |
@@ -58,7 +60,7 @@ Target: [Yashjain329/Decision-Drift-Gate](https://github.com/Yashjain329/Decisio
 
 Keep source, synthetic fixture generator, tests, documentation, and sanitized evidence. Ignore .env, provider keys, generated nested Git repositories, temporary snapshots, session tokens, and raw local output directories. An API key is setup configuration and is never required merely to rerun an approved check.
 
-Before publishing implementation, inspect git status and remote, review tracked artifacts, run the documented checks, and rehearse from a fresh checkout. Verify the remote commit after a push. The source repository currently contains planning work; application completion and remote publication remain outstanding.
+The implementation, fixture generator, browser, tests and documentation are built. Final source checks and remote reproduction are recorded in the release handoff. Verify the remote commit after publication; neither a source push nor automated tests completes human evaluation or pitch rehearsal.
 
 ## If schedule pressure appears
 

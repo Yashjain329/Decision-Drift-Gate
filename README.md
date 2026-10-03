@@ -2,7 +2,7 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status:** real Gemini capture, calibrated approval, review engine, CLI and browser lifecycle verified; final evaluation/release checks in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Updated:** 4 October 2026.
+**Status:** working CLI/browser prototype; **110 tests passed**, **15/15 acceptance cases matched**. Real Gemini capture and fresh browser lifecycle verified; human evaluation/rehearsal pending. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Deliverables:** live demo, documentation, and GitHub source repository. **Updated:** 4 October 2026.
 
 ## What we will demonstrate
 

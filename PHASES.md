@@ -1,6 +1,6 @@
 # Decision Drift Gate Phased Execution
 
-**Planning date:** 3 October 2026. **Execution:** phases 01–04 accepted; phase 05 evaluation and release are running. See [current status](docs/phases/STATUS.md) for measured evidence and release progress.
+**Planning date:** 3 October 2026. **Execution:** phases 01–04 accepted; phase 05 code/evidence verified with human evaluation and rehearsal pending. See [current status](docs/phases/STATUS.md) for release progress.
 
 **Orchestrator:** GPT 6.1 Sol High (`gpt-6.1-sol`, effort `high`). **Execution agent:** GPT 6 Luna (`gpt-6-luna`, inherited execution effort).
 

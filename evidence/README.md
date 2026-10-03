@@ -10,4 +10,40 @@
 
 Use the application’s Recorded mode to replay this capture only when current input content matches. Recorded generation is disclosed; subsequent approved-check execution is fresh. Live mode makes a new provider request. A source revision from the original generated repository is provenance, not a claim that this SHA belongs to the source-code repository.
 
-This capture demonstrates proposal generation. Calibration, approval, later execution, browser behavior and participant results require their own evidence in [phase status](../docs/phases/STATUS.md). No human review-time savings have been measured.
+## Automated case matrix
+
+[case-results.json](case-results.json) records root's independent 15-case run from clean source commit `c3feee81c6403361e449ec677accf97a7e27d899`: **15 matched expectations, zero mismatches**. Expected aggregates, per-check verdicts, warnings and metrics are all compared; execution errors are retained as errors/incomplete.
+
+| Cases | Observed result |
+|---|---|
+| Regression, unseen helper regression, silent abort | FAILED / VIOLATION_INTRODUCED |
+| Corrected, stable-key exception, unrelated | PASSED_CHECKS / CHECK_PASSED |
+| Preexisting failure | FAILED / PRE_EXISTING_FAILURE |
+| Resolved | PASSED_CHECKS / RESOLVED |
+| Crash, timeout, missing entrypoint | INCOMPLETE / NOT_CHECKED |
+| Candidate policy edit | INCOMPLETE, despite passing individual observations |
+| Zero authority, missing approval, forged approval | INCOMPLETE; unapproved authority never executes |
+
+The absolute input-repository path was replaced with `<generated approved demo>` in the curated copy. All other recorded observations, errors, hashes and source provenance are retained. Missing/forged fixtures were generated in a disposable clone with fixed synthetic commit metadata; they do not modify the input demo. The original local outputs stay ignored under `.ddg-evaluation`.
+
+The worker's initial expectation ledger omitted ordinary-test error warnings and policy-change warnings in some error/authority cases. Those expectation omissions are described in [the evaluator handoff](../docs/phases/handoffs/PHASE_05_EVAL.md). Actual observations were retained, not changed to force a match. This small authored matrix is not an independent production benchmark or a statistical performance claim.
+
+## Actual browser observations
+
+All images were captured from the local application on 4 October 2026. They document actual UI states; the opening reveal still requires a fresh run during judging.
+
+- [Regression](browser-regression.jpg): ordinary PASS/PASS, one operation/two jobs, introduced violation and governing DEC-002.
+- [Calibration and approval](browser-calibration.jpg): bad FAIL/two jobs, fixed and stable-key PASS/one job, exact citations and explicitly labeled AI integration attestation.
+- [Exception](browser-exception.jpg): stable-key completion reuses one real job.
+- [Policy review](browser-policy-review.jpg): primary INCOMPLETE despite passing individual observations.
+- [Stale report](browser-stale.jpg): a moved ref requires a rerun; the task-owned ref was restored afterward.
+- [Narrow layout](browser-narrow.jpg): readable verdict at 390 pixels without horizontal overflow.
+- [Live timeout](browser-live-timeout.jpg): real provider retry failed at the caller deadline, with no draft/approval. Root then explicitly selected Recorded; this attempt is not claimed as successful live generation.
+
+The prior successful live capture and the later timed-out browser request are separate events. Approval identity `Codex integration reviewer` is an AI local attestation, not a human participant or authenticated person. [The integrated browser handoff](../docs/phases/handoffs/PHASE_04.md) records the lifecycle and review corrections.
+
+## Human and release evidence
+
+[reviewer-observations.csv](reviewer-observations.csv) contains headers only. No review-time savings, participant feedback or timed speaking rehearsal have been measured. Video recording remains pending. Use [the protocol](../docs/HUMAN_EVALUATION.md) to collect those observations.
+
+[Phase status](../docs/phases/STATUS.md) and [evaluation](../docs/EVALUATION.md) record final tests, release and fresh-checkout reproduction separately from these artifacts.

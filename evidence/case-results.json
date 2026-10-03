@@ -1,0 +1,1866 @@
+{
+  "cases": [
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "regression",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "VIOLATION_INTRODUCED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-2",
+            "status": "FAIL",
+            "submit_calls": 2,
+            "unique_jobs": 2
+          },
+          "observed_verdict": "VIOLATION_INTRODUCED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "FAILED",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "FAIL",
+          "unique_jobs": 2
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "regression",
+      "head_sha": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "FAILED",
+      "observed_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:39Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "unseen_regression",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "VIOLATION_INTRODUCED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-2",
+            "status": "FAIL",
+            "submit_calls": 2,
+            "unique_jobs": 2
+          },
+          "observed_verdict": "VIOLATION_INTRODUCED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "FAILED",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "FAIL",
+          "unique_jobs": 2
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "unseen-regression",
+      "head_sha": "087b97ee864d6551b88d535a0cc1225d011ba861",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "FAILED",
+      "observed_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:41Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "corrected",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "CHECK_PASSED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "CHECK_PASSED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "PASSED_CHECKS",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "corrected",
+      "head_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "PASSED_CHECKS",
+      "observed_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:42Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "exception",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "CHECK_PASSED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 2,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "CHECK_PASSED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "PASSED_CHECKS",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "exception",
+      "head_sha": "15cae8f25fba29535b02f2f22164be6967562412",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "PASSED_CHECKS",
+      "observed_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": "operation-001",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:44Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "unrelated",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "CHECK_PASSED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "CHECK_PASSED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "PASSED_CHECKS",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "unrelated",
+      "head_sha": "903cf8b01bae705fd15c8ee364b7e4ce2841da67",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "PASSED_CHECKS",
+      "observed_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:45Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "abort",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "VIOLATION_INTRODUCED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": false,
+            "returned_job_id": null,
+            "status": "FAIL",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "VIOLATION_INTRODUCED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "FAILED",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": false,
+          "status": "FAIL",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "approved-abort",
+      "head_sha": "d4c0ab5a710da13170fb75081206072033138f50",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "FAILED",
+      "observed_verdicts": {
+        "CHK-001": "VIOLATION_INTRODUCED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:42:46Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "crashing",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "NOT_CHECKED",
+          "head_metrics": {
+            "error": "RuntimeError: synthetic client crash",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "observed_verdict": "NOT_CHECKED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "expected_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "fixture_kind": "approved_demo",
+      "head_ref": "approved-crashing",
+      "head_sha": "2abae8dc58cd8442a96ee4d46939e742d9090f72",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "observed_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": "RuntimeError: synthetic client crash",
+          "events": [],
+          "returned_job_exists": null,
+          "returned_job_id": null,
+          "status": "ERROR",
+          "submit_calls": null,
+          "unique_jobs": null
+        }
+      },
+      "run_at": "2026-10-03T19:42:47Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "EXECUTION_ERROR",
+          "message": "CHK-001 could not be evaluated on both revisions."
+        },
+        {
+          "code": "ORDINARY_TEST_ERROR",
+          "message": "The no-fault submission observation errored on at least one revision."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "timing_out",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "NOT_CHECKED",
+          "head_metrics": {
+            "error": "Target execution timed out",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "observed_verdict": "NOT_CHECKED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "expected_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "fixture_kind": "approved_demo",
+      "head_ref": "approved-timing-out",
+      "head_sha": "a3c5db66c4d5ca58e3b1c478c4cea3b5204ff30e",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "observed_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": "Target execution timed out",
+          "events": [],
+          "returned_job_exists": null,
+          "returned_job_id": null,
+          "status": "ERROR",
+          "submit_calls": null,
+          "unique_jobs": null
+        }
+      },
+      "run_at": "2026-10-03T19:43:08Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "EXECUTION_ERROR",
+          "message": "CHK-001 could not be evaluated on both revisions."
+        },
+        {
+          "code": "ORDINARY_TEST_ERROR",
+          "message": "The no-fault submission observation errored on at least one revision."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "missing_entrypoint",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "NOT_CHECKED",
+          "head_metrics": {
+            "error": "AttributeError: Target module has no callable submit_job entrypoint",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "observed_verdict": "NOT_CHECKED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "expected_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "fixture_kind": "approved_demo",
+      "head_ref": "approved-missing-entrypoint",
+      "head_sha": "2764650c4b043ec2aa31fa859d1938598897b084",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "observed_warning_codes": [
+        "EXECUTION_ERROR",
+        "ORDINARY_TEST_ERROR"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": "AttributeError: Target module has no callable submit_job entrypoint",
+          "events": [],
+          "returned_job_exists": null,
+          "returned_job_id": null,
+          "status": "ERROR",
+          "submit_calls": null,
+          "unique_jobs": null
+        }
+      },
+      "run_at": "2026-10-03T19:43:09Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "EXECUTION_ERROR",
+          "message": "CHK-001 could not be evaluated on both revisions."
+        },
+        {
+          "code": "ORDINARY_TEST_ERROR",
+          "message": "The no-fault submission observation errored on at least one revision."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "approved-base",
+      "base_sha": "a14eead32bad9880f042efe5275c4c82ab986dec",
+      "case_id": "policy_edit",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "CHECK_PASSED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "CHECK_PASSED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "expected_warning_codes": [
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "fixture_kind": "approved_demo",
+      "head_ref": "policy-edit",
+      "head_sha": "7c717fa3a8844c493622fef4a03843bba9809429",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "CHECK_PASSED"
+      },
+      "observed_warning_codes": [
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:11Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "POLICY_REVIEW_REQUIRED",
+          "message": "Head changes .ddg policy artifacts; authority remains pinned to base."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "preexisting-base",
+      "base_sha": "a00d5e739c97016d62c0774d5c2f5913009ebe72",
+      "case_id": "preexisting_failure",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-2",
+            "status": "FAIL",
+            "submit_calls": 2,
+            "unique_jobs": 2
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "PRE_EXISTING_FAILURE",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-2",
+            "status": "FAIL",
+            "submit_calls": 2,
+            "unique_jobs": 2
+          },
+          "observed_verdict": "PRE_EXISTING_FAILURE"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "FAILED",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "FAIL",
+          "unique_jobs": 2
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "FAIL",
+          "unique_jobs": 2
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "PRE_EXISTING_FAILURE"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "preexisting-head",
+      "head_sha": "72e7ab03dcaf81f06e642d507fdc706fc6694d87",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "FAILED",
+      "observed_verdicts": {
+        "CHK-001": "PRE_EXISTING_FAILURE"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:12Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "preexisting-base",
+      "base_sha": "a00d5e739c97016d62c0774d5c2f5913009ebe72",
+      "case_id": "resolved",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-2",
+            "status": "FAIL",
+            "submit_calls": 2,
+            "unique_jobs": 2
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": null,
+          "expected_verdict": "RESOLVED",
+          "head_metrics": {
+            "error": null,
+            "returned_job_exists": true,
+            "returned_job_id": "job-1",
+            "status": "PASS",
+            "submit_calls": 1,
+            "unique_jobs": 1
+          },
+          "observed_verdict": "RESOLVED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "PASSED_CHECKS",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": true,
+          "status": "FAIL",
+          "unique_jobs": 2
+        },
+        "head": {
+          "returned_job_exists": true,
+          "status": "PASS",
+          "unique_jobs": 1
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "RESOLVED"
+      },
+      "expected_warning_codes": [],
+      "fixture_kind": "approved_demo",
+      "head_ref": "resolved",
+      "head_sha": "4615505c3657a8d4053853820b79d5eda5d743e1",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "PASSED_CHECKS",
+      "observed_verdicts": {
+        "CHK-001": "RESOLVED"
+      },
+      "observed_warning_codes": [],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:13Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": []
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "calibration-good",
+      "base_sha": "e7fd89f28f78a6f1484535da14cd56f041acf74b",
+      "case_id": "zero_authority",
+      "check_results": [],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {},
+      "expected_verdicts": {},
+      "expected_warning_codes": [
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "fixture_kind": "existing_unapproved_revision",
+      "head_ref": "regression",
+      "head_sha": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {},
+      "observed_warning_codes": [
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:14Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "POLICY_REVIEW_REQUIRED",
+          "message": "Head changes .ddg policy artifacts; authority remains pinned to base."
+        },
+        {
+          "code": "MISSING_APPROVED_COVERAGE",
+          "message": "Active base decisions lack an approved check: DEC-002"
+        },
+        {
+          "code": "NO_ACTIVE_APPROVED_CHECKS",
+          "message": "No active approved checks were found in base."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "dc9233d5ca2aebc37a963ae832a64a7b127e1faa",
+      "base_sha": "dc9233d5ca2aebc37a963ae832a64a7b127e1faa",
+      "case_id": "missing_bundle",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": "Approved check is missing its validation or approval record",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": "Approved check is missing its validation or approval record",
+          "expected_verdict": "NOT_CHECKED",
+          "head_metrics": {
+            "error": "Approved check is missing its validation or approval record",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "observed_verdict": "NOT_CHECKED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        },
+        "head": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "expected_warning_codes": [
+        "INVALID_APPROVAL_BUNDLE",
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "fixture_kind": "disposable_clone_missing_approval",
+      "head_ref": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "head_sha": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "observed_warning_codes": [
+        "INVALID_APPROVAL_BUNDLE",
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:15Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "POLICY_REVIEW_REQUIRED",
+          "message": "Head changes .ddg policy artifacts; authority remains pinned to base."
+        },
+        {
+          "code": "INVALID_APPROVAL_BUNDLE",
+          "message": "CHK-001: Approved check is missing its validation or approval record"
+        },
+        {
+          "code": "MISSING_APPROVED_COVERAGE",
+          "message": "Active base decisions lack an approved check: DEC-002"
+        },
+        {
+          "code": "NO_ACTIVE_APPROVED_CHECKS",
+          "message": "No approved checks govern an active decision in base."
+        }
+      ]
+    },
+    {
+      "aggregate_match": true,
+      "base_ref": "49d84ac2c43abb35f792a3f0ce8512aed591b47b",
+      "base_sha": "49d84ac2c43abb35f792a3f0ce8512aed591b47b",
+      "case_id": "forged_bundle",
+      "check_results": [
+        {
+          "base_metrics": {
+            "error": "Approved check bundle digest or calibration evidence is invalid",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "check_digest": "3fe280834c76265c2ead4f4ef75220d4496db9abb03e7620d8bf941c38fc1e21",
+          "check_id": "CHK-001",
+          "error": "Approved check bundle digest or calibration evidence is invalid",
+          "expected_verdict": "NOT_CHECKED",
+          "head_metrics": {
+            "error": "Approved check bundle digest or calibration evidence is invalid",
+            "returned_job_exists": null,
+            "returned_job_id": null,
+            "status": "ERROR",
+            "submit_calls": null,
+            "unique_jobs": null
+          },
+          "observed_verdict": "NOT_CHECKED"
+        }
+      ],
+      "error": null,
+      "expected_aggregate": "INCOMPLETE",
+      "expected_metrics": {
+        "base": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        },
+        "head": {
+          "returned_job_exists": null,
+          "status": "ERROR",
+          "unique_jobs": null
+        }
+      },
+      "expected_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "expected_warning_codes": [
+        "INVALID_APPROVAL_BUNDLE",
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "fixture_kind": "disposable_clone_forged_digest",
+      "head_ref": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "head_sha": "ccdd8eb1f705dd47172ce29781dd19b2f9e2b5c6",
+      "matches_expectation": true,
+      "metrics_match": true,
+      "observed_aggregate": "INCOMPLETE",
+      "observed_verdicts": {
+        "CHK-001": "NOT_CHECKED"
+      },
+      "observed_warning_codes": [
+        "INVALID_APPROVAL_BUNDLE",
+        "MISSING_APPROVED_COVERAGE",
+        "NO_ACTIVE_APPROVED_CHECKS",
+        "POLICY_REVIEW_REQUIRED"
+      ],
+      "ordinary_tests": {
+        "base": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        },
+        "head": {
+          "error": null,
+          "events": [
+            {
+              "call": 1,
+              "event": "submit",
+              "idempotency_key": null,
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "accepted",
+              "job_id": "job-1",
+              "operation_id": "operation-001"
+            },
+            {
+              "call": 1,
+              "event": "response",
+              "job_id": "job-1",
+              "status": 201
+            }
+          ],
+          "returned_job_exists": true,
+          "returned_job_id": "job-1",
+          "status": "PASS",
+          "submit_calls": 1,
+          "unique_jobs": 1
+        }
+      },
+      "run_at": "2026-10-03T19:43:15Z",
+      "verdicts_match": true,
+      "warning_codes_match": true,
+      "warnings": [
+        {
+          "code": "POLICY_REVIEW_REQUIRED",
+          "message": "Head changes .ddg policy artifacts; authority remains pinned to base."
+        },
+        {
+          "code": "INVALID_APPROVAL_BUNDLE",
+          "message": "CHK-001: Approved check bundle digest or calibration evidence is invalid"
+        },
+        {
+          "code": "MISSING_APPROVED_COVERAGE",
+          "message": "Active base decisions lack an approved check: DEC-002"
+        },
+        {
+          "code": "NO_ACTIVE_APPROVED_CHECKS",
+          "message": "No approved checks govern an active decision in base."
+        }
+      ]
+    }
+  ],
+  "evaluated_at": "2026-10-03T19:43:16Z",
+  "evaluator_source": {
+    "commit": "c3feee81c6403361e449ec677accf97a7e27d899",
+    "working_tree_dirty": false
+  },
+  "input_head": "a14eead32bad9880f042efe5275c4c82ab986dec",
+  "input_repo": "<generated approved demo>",
+  "sanitization": "Only input_repo absolute path replaced; all observed hashes, metrics, errors, expected outcomes and source provenance retained.",
+  "schema_version": 1,
+  "summary": {
+    "case_count": 15,
+    "matched_expectations": 15,
+    "mismatches": []
+  }
+}

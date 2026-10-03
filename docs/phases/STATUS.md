@@ -10,11 +10,11 @@ Execution is authorized with parallel GPT 6 Luna workers and independent Sol Hig
 | 02 AI and approval | ACCEPTED | Parallel GPT 6 Luna workers | e3147be, 03916d4 | Independent full suite: 70 passed in 139.355 seconds; real capture/replay; Sol review | None |
 | 03 Engine and CLI | ACCEPTED | Parallel GPT 6 Luna workers | bfbe1d2, ff631c4 | Independent full suite: 96 passed in 200.840 seconds; Sol review and real CLI reveal | None |
 | 04 Live demo | ACCEPTED | Parallel GPT 6 Luna workers | 7af2be8, 3beaf31 | Independent 9 HTTP tests, 13 proposal tests; actual browser lifecycle, fresh result, persistence and responsive inspection | New live browser request timed out; prior real capture verified |
-| 05 Evaluation and submission | RUNNING | GPT 6 Luna evaluator; Sol release review | None | Evaluator dispatched; release documentation and evidence in progress | Matrix, final suite, remote reproduction, human evaluation and rehearsal |
+| 05 Evaluation and submission | CODE_VERIFIED_EVIDENCE_PENDING | GPT 6 Luna evaluator; Sol release review | c3feee8 | Independent full suite: 110 passed in 280.603 seconds; clean-source matrix 15/15 matched | Remote reproduction in progress; human evaluation, rehearsal and video pending |
 
 ## Next eligible work
 
-Phase 05 evaluator implementation and release documentation run in parallel with disjoint ownership. Sol retains final checks and publication. Human observations remain external evidence.
+Phase 05 code and automated evidence are verified. Sol is publishing and reproducing the remote source. Human observations remain external evidence, so the phase is not fully accepted.
 
 ## Orchestrator review record
 
@@ -30,4 +30,4 @@ Phase 04 independently verified actual browser proposal/calibration/approval/exe
 
 - Real Gemini proposal capture and rebuilt-history replay succeeded; see [evidence](../../evidence/README.md). Credentials remain in the ignored local `.env` and are excluded from source/reports.
 - Human reviewers and a presenter are needed for evaluation and rehearsal. No participant feedback or speaking time has been collected.
-- The existing origin points to the intended GitHub repository; no phase implementation has been published.
+- Publication to the configured GitHub origin and fresh remote reproduction are in progress; the final release handoff records their outcome.
