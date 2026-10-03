@@ -2,13 +2,15 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status:** foundation, real Gemini proposal, approval, review engine and CLI verified; 96 tests passed. Browser demo is in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Planning date:** 3 October 2026.
+**Status:** real Gemini capture, calibrated approval, review engine, CLI and browser lifecycle verified; final evaluation/release checks in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Updated:** 4 October 2026.
 
 ## What we will demonstrate
 
 A team replaces a blanket retry rule after discovering that a request can succeed even when its response fails. AI reads the changed decision and drafts a structured behavioral check. A developer validates and approves it. Later code accidentally restores blind retries. Ordinary happy-path tests pass, but the approved check observes two jobs created for one operation and reports the failure with the replacement decision.
 
 The first adapter covers one synthetic Python job client. It does not claim to understand arbitrary repositories or all engineering decisions. A passing result means the approved check passed for the recorded code revisions.
+
+![Actual browser execution: ordinary tests pass while an approved check observes duplicate jobs](evidence/browser-regression.jpg)
 
 ```mermaid
 flowchart LR
@@ -33,7 +35,22 @@ These documents define the current approved-check direction. Earlier proposal an
 
 Python 3.12 or newer, Git, standard-library execution and tests, and a small local browser interface. Gemini drafts structured JSON through an optional provider adapter. Once a check is approved, executing it does not require an LLM or internet connection. The browser and command line call the same engine.
 
-The CLI lifecycle is implemented and verified. The browser interface follows in Phase 04.
+The CLI and local browser call the same proposal, calibration, approval and review functions.
+
+## Run the browser
+
+For a complete walkthrough, create a new synthetic repository and start the server:
+
+```powershell
+python -m ddg demo-init --destination .ddg-demo
+python -m ddg serve --repo .ddg-demo --state-dir .ddg-state
+```
+
+Open `http://127.0.0.1:8765`. Choose **Draft a check**, select **Recorded proposal**, draft and validate it, then enter a reviewer and review note to approve the exact check. Run **Retry regression**, **Unseen helper regression**, and **Allowed idempotency exception**. The first two fail; the exception passes. For live generation, start the server with the optional virtual-environment Python after the setup below.
+
+If the demo already exists, start only the server; its saved approval and session resume. Use a new destination for another full lifecycle. Stop the server with Ctrl+C. It binds to this machine only.
+
+For the fast pitch, approve beforehand and begin on **Review change**. Disclose that approval was prepared earlier, then click **Run approved check** to execute fresh observations. Hashes, approval and execution details remain available in the evidence drawer.
 
 ## Run the CLI
 
@@ -74,11 +91,19 @@ If `.env` already exists, edit it instead of copying over it. Fill `GEMINI_API_K
 .\.venv\Scripts\python.exe -m ddg propose --repo .ddg-demo --decision DEC-002 --mode live --out .ddg-state/live-draft.json
 ```
 
-Live mode calls Gemini and never silently switches to a recorded fixture on failure. A proposal remains unapproved until successful calibration and explicit review.
+Live mode calls Gemini and never silently switches to a recorded fixture on failure. Each interaction has a 30-second caller deadline; one schema/citation repair can require a second interaction. A timed-out SDK request may finish in its daemon worker, but its late response cannot create a proposal or alter session state. Choose Recorded explicitly if the provider is slow or unavailable. A proposal remains unapproved until successful calibration and explicit review.
 
 ## Evidence and limits
 
-Read [architecture](docs/ARCHITECTURE.md), [capture provenance](evidence/README.md), and [human evaluation protocol](docs/HUMAN_EVALUATION.md). The supported demo is one synthetic Python adapter and the DEC-001 → DEC-002 replacement. It is not an arbitrary-repository sandbox or authenticated approval service. No human review-time savings or measured pitch duration have been established.
+Read [architecture](docs/ARCHITECTURE.md), [evaluation](docs/EVALUATION.md), [evidence provenance](evidence/README.md), and [human evaluation protocol](docs/HUMAN_EVALUATION.md). The supported demo is one synthetic Python adapter and the DEC-001 → DEC-002 replacement. It is not an arbitrary-repository sandbox or authenticated approval service. No human review-time savings or measured pitch duration have been established.
+
+After approving a demo, run the deterministic case matrix:
+
+```powershell
+python scripts/evaluate.py --repo .ddg-demo --out .ddg-evaluation
+```
+
+Results preserve expected and observed outcomes, revisions, check digests, metrics and errors. The timing CSV stays empty until actual human measurements are collected.
 
 ## Why use it
 

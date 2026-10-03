@@ -9,12 +9,12 @@ Execution is authorized with parallel GPT 6 Luna workers and independent Sol Hig
 | 01 Foundation | ACCEPTED | Parallel GPT 6 Luna workers | 84546e6, 2bd447b | Independent discovery: 34 tests passed in 29.644 seconds | None |
 | 02 AI and approval | ACCEPTED | Parallel GPT 6 Luna workers | e3147be, 03916d4 | Independent full suite: 70 passed in 139.355 seconds; real capture/replay; Sol review | None |
 | 03 Engine and CLI | ACCEPTED | Parallel GPT 6 Luna workers | bfbe1d2, ff631c4 | Independent full suite: 96 passed in 200.840 seconds; Sol review and real CLI reveal | None |
-| 04 Live demo | RUNNING | Parallel GPT 6 Luna workers | None | Server and frontend workers dispatched | HTTP integration and browser inspection |
-| 05 Evaluation and submission | PLANNED | GPT 6 Luna when dispatched | None | Not run | Entire phase, including human evaluation and remote source verification |
+| 04 Live demo | ACCEPTED | Parallel GPT 6 Luna workers | 7af2be8, 3beaf31 | Independent 9 HTTP tests, 13 proposal tests; actual browser lifecycle, fresh result, persistence and responsive inspection | New live browser request timed out; prior real capture verified |
+| 05 Evaluation and submission | RUNNING | GPT 6 Luna evaluator; Sol release review | None | Evaluator dispatched; release documentation and evidence in progress | Matrix, final suite, remote reproduction, human evaluation and rehearsal |
 
 ## Next eligible work
 
-Phase 04 server and frontend workers have disjoint ownership and agreed JSON/session-token interfaces. No additional planning approval loop is required for routine authorized steps.
+Phase 05 evaluator implementation and release documentation run in parallel with disjoint ownership. Sol retains final checks and publication. Human observations remain external evidence.
 
 ## Orchestrator review record
 
@@ -23,6 +23,8 @@ Phase 01 was independently reviewed by GPT 6.1 Sol High. Windows UTF-8 handling,
 Phase 02 independently passed the real-capture lifecycle and replay. Review fixes cover input-only citations, preserved capture provenance, strict artifact/observation types, generic check-ID activation, and refusal before writes for collisions/reapproval. Sol found no remaining important blocker in the supported synthetic scope; root accepted after the fresh 70-test suite. See [AI/approval handoff](handoffs/PHASE_02.md).
 
 Phase 03 independently verified authority, all-check execution, coverage, attribution, exits, reports and staleness. Root's fresh 96-test suite passed; the actual recorded-capture CLI reveal showed 1→2 jobs with ordinary tests passing. See [engine/CLI handoff](handoffs/PHASE_03.md).
+
+Phase 04 independently verified actual browser proposal/calibration/approval/execution, explicit fallback after a bounded real live timeout, projector/narrow layouts, keyboard navigation and restored state. See [browser handoff](handoffs/PHASE_04.md). SDK timeouts alone did not bound the live request; the accepted caller deadline rejects late output.
 
 ## External dependencies
 

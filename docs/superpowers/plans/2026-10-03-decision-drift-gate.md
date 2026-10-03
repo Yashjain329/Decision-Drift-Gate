@@ -423,4 +423,4 @@ One person may hold several roles; team size is not assumed. Tasks are sequentia
 
 Coverage: decision authority and pinned revisions -> Tasks 1/5; bounded structured schema and behavior -> Task 2; live/recorded provenance -> Task 3; calibration and exact approval -> Task 4; complete state/error matrix -> Task 5; reproducible commands and stale evidence -> Task 6; live usability/local action controls -> Task 7; experiment, pitch rehearsal, documentation/source submission -> Task 8.
 
-All five Review Focus cases have owners and concrete expected results. All shared names used by later tasks are declared above or explicitly introduced by their owning task. The current repository contains planning documents only; these tests have not been executed yet.
+All five Review Focus cases have owners and concrete expected results. All shared names used by later tasks are declared above or explicitly introduced by their owning task. At plan creation the repository contained planning documents only. Current execution and measured outcomes are recorded in docs/phases/STATUS.md.

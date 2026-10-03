@@ -10,6 +10,20 @@ Before timing, record participant/task assignment and the expected verdict in a 
 
 Use [the raw-observation template](../evidence/reviewer-observations.csv). It contains headers only. Do not fill it with simulated participants or inferred times. Report sample size, individual observations and failures before making a percentage-saving claim.
 
+### Facilitator task sheet
+
+Keep the expected answers hidden from participants until each task ends. Build the synthetic repository once, and use pinned revisions throughout a participant's session. The generator authors the variants; none is a production incident.
+
+| Task | Pair of variants | Expected answer | Evidence to identify |
+|---|---|---|---|
+| Duplicate creation | `regression` / `unseen-regression` | Newly violates DEC-002 | First creation succeeded despite 503; blind retry creates a second job |
+| Valid completion | `corrected` / `exception` | Approved behavior passes | One real job returned through reconciliation or stable idempotency key |
+| Invalid shortcut | `approved-abort` / `policy-edit` | Fail / incomplete | Completion is missing / candidate edits policy requiring review |
+
+For reviewer 1, assign the first variant to baseline and second to assisted; reverse that mapping for reviewer 2; alternate the presentation order for reviewer 3. These pairs share the same rule and differ in implementation. Record this small synthetic setup as a preliminary comparison, including possible learning effects. Do not treat the pair as perfectly equal difficulty.
+
+Record each tool's output and time from task exposure to submitted verdict/reason. Also measure the check-generation, calibration and approval setup separately. Ask afterward which evidence was useful, what was confusing, and whether maintaining the check would justify its setup cost. The CSV remains empty until actual humans respond.
+
 ## Pitch rehearsal
 
 Use [the pitch and demo script](PITCH_AND_DEMO.md). Start with an honestly disclosed previously approved check, then execute a fresh regression comparison during the reveal. Have the recorded proposal fallback ready, with mode visible. Rehearse the longer live generation/calibration/approval lifecycle separately.

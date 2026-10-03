@@ -1,6 +1,6 @@
 # Phase 04 Live Browser Demonstration
 
-**State:** RUNNING with parallel server and frontend ownership. **Orchestrator:** GPT 6.1 Sol High. **Executor:** GPT 6 Luna. **Detailed scope:** Task 7 in [the implementation plan](../superpowers/plans/2026-10-03-decision-drift-gate.md).
+**State:** ACCEPTED; see [integrated review](handoffs/PHASE_04.md). **Orchestrator:** GPT 6.1 Sol High. **Executor:** GPT 6 Luna. **Detailed scope:** Task 7 in [the implementation plan](../superpowers/plans/2026-10-03-decision-drift-gate.md).
 
 ## Outcome
 
@@ -14,13 +14,13 @@ Luna owns `ddg/web.py`, `web/index.html`, `web/app.js`, `web/style.css`, `tests/
 
 ## Execution checklist
 
-- [ ] Build the local named-asset server and specified JSON routes backed by the existing functions.
-- [ ] Implement per-session action token, local Host/Origin checks, body limits, serialized mutation and atomic session state.
-- [ ] Implement Decision change, Approve check and Review change views.
-- [ ] Show draft/capture mode, validation, approval identity and stale state explicitly.
-- [ ] Display real ordinary-test results, expected/observed job count, service timeline and governing decision.
-- [ ] Inspect full lifecycle, action errors, refresh persistence, keyboard access and projector-size layout in a real browser.
-- [ ] Verify fresh fast reveal and longer walkthrough, commit the delivery and write the handoff.
+- [x] Build the local named-asset server and specified JSON routes backed by the existing functions.
+- [x] Implement per-session action token, local Host/Origin checks, body limits, serialized mutation and atomic session state.
+- [x] Implement Decision change, Approve check and Review change views.
+- [x] Show draft/capture mode, validation, approval identity and stale state explicitly.
+- [x] Display real ordinary-test results, expected/observed job count, service timeline and governing decision.
+- [x] Inspect full lifecycle, action errors, refresh persistence, keyboard access and projector-size layout in a real browser.
+- [x] Verify fresh fast reveal and longer walkthrough, commit the delivery and write the handoff.
 
 ## Verification and acceptance
 

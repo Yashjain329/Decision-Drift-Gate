@@ -1,6 +1,6 @@
 # Phase 05 Evaluation and Hackathon Submission
 
-**State:** PLANNED. **Orchestrator:** GPT 6.1 Sol High. **Executor:** GPT 6 Luna. **Detailed scope:** Task 8 in [the implementation plan](../superpowers/plans/2026-10-03-decision-drift-gate.md).
+**State:** RUNNING. **Orchestrator:** GPT 6.1 Sol High. **Executor:** GPT 6 Luna. **Detailed scope:** Task 8 in [the implementation plan](../superpowers/plans/2026-10-03-decision-drift-gate.md).
 
 ## Outcome
 
@@ -10,7 +10,7 @@ Deliver verified source, accurate documentation, case-level evidence and a rehea
 
 Entry: Phase 04 accepted and all preceding code gates verified. Actual live-provider evidence, participant feedback and source publication must be resolved or explicitly reported outstanding before final submission readiness.
 
-Luna owns `scripts/evaluate.py`, `tests/test_evaluate.py`, `evidence/README.md`, sanitized evidence artifacts, `docs/EVALUATION.md`, `docs/ARCHITECTURE.md`, release updates to README/pitch/delivery checklist, and `docs/phases/handoffs/PHASE_05.md`. Sol owns final acceptance, truthful claims and the publishing decision within the user's authorized submission scope. Human reviewers/presenter own their observations and rehearsal; agents cannot supply fictional participants.
+Dispatch ownership: Luna owns `scripts/evaluate.py`, `tests/test_evaluate.py` and its evaluator handoff. Sol owns curated evidence, release documentation, final acceptance, truthful claims, serialized commits and publication within the user's authorized submission scope. Human reviewers/presenter own their observations and rehearsal; agents cannot supply fictional participants.
 
 ## Execution checklist
 

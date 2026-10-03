@@ -1,6 +1,6 @@
 # Decision Drift Gate Pitch and Demo
 
-**Date:** 3 October 2026. **Status:** presentation plan; revise outcome claims after execution. **Audience:** Algo Works Hackathon judges. **Deliverables:** live demonstration, documentation, and source repository.
+**Updated:** 4 October 2026. **Status:** browser lifecycle and fresh reveal verified; human speaking rehearsal pending. **Audience:** Algo Works Hackathon judges. **Deliverables:** live demonstration, documentation, and source repository.
 
 ## Twenty second pitch
 
@@ -63,11 +63,11 @@ Keep the policy-edit, preexisting failure, and stale-report cases ready for tech
 | Claim | Present status | Evidence required before saying it publicly |
 |---|---|---|
 | Selected top 25 from 125 | Team-reported | Organizer confirmation if used on a public slide |
-| AI drafts a grounded check | Planned | Real provider capture with matching inputs |
-| Later regression produces duplicate jobs | Planned | Fresh execution and saved trace |
-| Equivalent unseen regression is caught | Planned | Holdout case absent from proposal/calibration inputs |
-| Legitimate exception passes | Planned | Stable-key case with one created job |
-| Candidate cannot silently remove its own rule | Designed | Policy-edit case returns INCOMPLETE |
+| AI drafts a grounded check | Verified capture | Real Gemini capture; a later browser Live request timed out and required explicit Recorded selection |
+| Later regression produces duplicate jobs | Verified execution | Actual browser and CLI runs, one→two jobs with ordinary tests passing |
+| Equivalent unseen regression is caught | Verified synthetic case | Helper variant absent from provider/calibration inputs; see evaluation evidence |
+| Legitimate exception passes | Verified synthetic case | Stable-key case completes with one real job |
+| Candidate cannot silently remove its own rule | Verified engine behavior | Target authority retained; policy-edit case returns INCOMPLETE |
 | 50% less review time | Unmeasured target | Counterbalanced baseline comparison with raw timing/sample size |
 | Works for all repositories/languages | Unsupported | Never use this claim for the prototype |
 
