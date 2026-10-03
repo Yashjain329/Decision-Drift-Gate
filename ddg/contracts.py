@@ -124,4 +124,58 @@ def validate_check(value: dict) -> dict:
     return copy.deepcopy(value)
 
 
+def validate_decisions(records: list[dict]) -> dict[str, dict]:
+    """Validate decision records and their single-parent supersession graph."""
+    fields = {"schema_version", "id", "status", "supersedes", "scope", "rule", "exceptions"}
+    if not isinstance(records, list) or not records:
+        raise ValueError("Decision records must be a nonempty list")
+    by_id: dict[str, dict] = {}
+    for record in records:
+        if not isinstance(record, dict) or set(record) != fields:
+            raise ValueError("Decision record fields are invalid")
+        if any(not isinstance(key, str) for key in record):
+            raise ValueError("Decision field names must be strings")
+        version = record["schema_version"]
+        if isinstance(version, bool) or not isinstance(version, int) or version != 1:
+            raise ValueError("Decision schema_version must be integer 1")
+        _record_id(record["id"], "DEC", "decision id")
+        if record["id"] in by_id:
+            raise ValueError(f"Duplicate decision id: {record['id']}")
+        if record["status"] not in ("active", "superseded"):
+            raise ValueError("Decision status must be active or superseded")
+        predecessor = record["supersedes"]
+        if predecessor is not None:
+            _record_id(predecessor, "DEC", "decision supersedes")
+        _nonblank(record["scope"], "decision scope")
+        _nonblank(record["rule"], "decision rule")
+        if not isinstance(record["exceptions"], list):
+            raise ValueError("Decision exceptions must be a list")
+        for exception in record["exceptions"]:
+            _nonblank(exception, "decision exception")
+        by_id[record["id"]] = copy.deepcopy(record)
+
+    active_successors: dict[str, list[str]] = {}
+    for record in by_id.values():
+        predecessor = record["supersedes"]
+        if predecessor is not None:
+            if predecessor not in by_id:
+                raise ValueError(f"Missing superseded decision: {predecessor}")
+            if record["status"] == "active":
+                if by_id[predecessor]["status"] == "active":
+                    raise ValueError("An active decision cannot have an active successor")
+                active_successors.setdefault(predecessor, []).append(record["id"])
+    if any(len(successors) > 1 for successors in active_successors.values()):
+        raise ValueError("Competing active successor decisions require clarification")
+
+    for start in by_id:
+        seen: set[str] = set()
+        current: str | None = start
+        while current is not None:
+            if current in seen:
+                raise ValueError("Decision supersession cycle detected")
+            seen.add(current)
+            current = by_id[current]["supersedes"]
+    return by_id
+
+
 

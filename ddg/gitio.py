@@ -59,6 +59,17 @@ def read_at(repo: Path, sha: str, path: str) -> str:
     return _git(Path(repo), "show", f"{commit}:{safe_path}")
 
 
+def list_at(repo: Path, sha: str, prefix: str) -> list[str]:
+    """List tracked files below a fixed repository-relative prefix at a commit."""
+    commit = _require_sha(sha)
+    safe_prefix = _require_path(prefix.rstrip("/\\"))
+    output = _git(Path(repo), "-c", "core.quotePath=false", "ls-tree", "-r", "--name-only", commit, "--", safe_prefix)
+    paths = [line for line in output.splitlines() if line]
+    if any(not path.startswith(safe_prefix + "/") for path in paths):
+        raise ValueError("Git returned a path outside the requested prefix")
+    return sorted(paths)
+
+
 def diff_at(repo: Path, base_sha: str, head_sha: str) -> str:
     """Return source-code context between two full commit ids."""
     base = _require_sha(base_sha)
