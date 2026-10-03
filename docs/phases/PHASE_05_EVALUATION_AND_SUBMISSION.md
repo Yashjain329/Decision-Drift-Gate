@@ -14,16 +14,17 @@ Dispatch ownership: Luna owns `scripts/evaluate.py`, `tests/test_evaluate.py` an
 
 ## Execution checklist
 
-- [ ] Implement deterministic acceptance-case evaluation and raw CSV timing fields.
-- [ ] Run the case matrix with actual verdicts, metrics, revisions and check digests.
-- [ ] Preserve misses, incorrect warnings and errors in the results.
-- [ ] Assemble the real model capture, browser evidence and clearly labeled fallback.
-- [ ] Document setup, tested versions/platforms, architecture, supported adapter and actual limitations.
-- [ ] Prepare equivalent counterbalanced reviewer tasks; collect human feedback when available.
+- [x] Implement deterministic acceptance-case evaluation and raw CSV timing fields.
+- [x] Run the case matrix with actual verdicts, metrics, revisions and check digests.
+- [x] Preserve mismatches/warnings/errors; record expectation-ledger corrections transparently.
+- [x] Assemble real model capture, browser evidence and clearly labeled fallback.
+- [x] Document setup, tested versions/platforms, architecture, supported adapter and actual limitations.
+- [x] Prepare counterbalanced reviewer tasks and a header-only raw-observation template.
+- [ ] Collect actual human feedback; no participants have completed the comparison.
 - [ ] Rehearse the 45-word pitch five times and the longer walkthrough; record measured durations.
-- [ ] Inspect tracked source/evidence and verify setup from a fresh checkout.
-- [ ] Commit the release documentation and supply a complete handoff for Sol's review.
-- [ ] Publish under the user's implementation/submission authorization and verify the remote commit and reproducibility. No phase-documentation update itself publishes.
+- [x] Inspect tracked source/evidence and verify setup from a fresh GitHub checkout.
+- [x] Commit release documentation and complete the reviewed release handoff.
+- [x] Publish under the user's implementation/submission authorization; verify remote commit and fresh-clone reproducibility.
 
 ## Verification and acceptance
 

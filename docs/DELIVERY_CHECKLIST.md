@@ -4,7 +4,7 @@
 
 ## Definition of done
 
-- [ ] A fresh checkout can build the synthetic history and start the local browser using documented commands.
+- [x] Fresh GitHub checkout reproduced synthetic history, Recorded CLI lifecycle and actual local server/assets without provider credentials.
 - [x] A real AI call produced a schema-valid grounded proposal; sanitized capture and input digest are inspectable. A later browser Live retry timed out honestly.
 - [x] Explicit exact-check approval workflow verified after bad/good/exception calibration, using a labeled Codex integration attestation. A presenter should review the check and supply their own attestation in their fresh walkthrough.
 - [x] Blind-retry and unseen helper regressions fail; reconciliation and stable-key exception pass.
@@ -16,7 +16,7 @@
 - [x] Offline generation/execution work with explicit Recorded provenance.
 - [x] Standard-library suite passes: 110 tests in 280.603 seconds. Actual browser walkthrough verified on this Windows machine; recheck the final presentation machine if different.
 - [x] Documentation states supported adapter, limitations, actual case outcomes and tested versions.
-- [ ] Source and documentation are present in the configured GitHub repository and reproducible from its remote commit.
+- [x] Source/docs published and remote commit verified; fresh clone reproduced all 15 case expectations. See [release handoff](phases/handoffs/PHASE_05.md).
 
 ## Ownership
 

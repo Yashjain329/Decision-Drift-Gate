@@ -105,6 +105,8 @@ python scripts/evaluate.py --repo .ddg-demo --out .ddg-evaluation
 
 Results preserve expected and observed outcomes, revisions, check digests, metrics and errors. The timing CSV stays empty until actual human measurements are collected.
 
+The published source was independently reproduced from a fresh GitHub clone: Recorded lifecycle, local server and all 15 expected cases work without provider credentials. See [release verification](docs/phases/handoffs/PHASE_05.md).
+
 ## Why use it
 
 The proposed value is less effort turning a changed decision into a maintained check, and a clearer explanation when later code breaks it. Existing tests, decision records, and AI reviewers are the baseline. We must measure the additional value; the original 50% review-time reduction remains an experimental target.

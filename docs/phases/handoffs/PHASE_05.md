@@ -23,6 +23,12 @@ The 45-word script is a target, not measured speaking time. [Human evaluation](.
 
 ## Publication and residual scope
 
-Authorized destination: [Yashjain329/Decision-Drift-Gate](https://github.com/Yashjain329/Decision-Drift-Gate). The release owner is publishing the source and will record the verified remote commit and fresh-clone result here after they actually complete.
+Published to [Yashjain329/Decision-Drift-Gate](https://github.com/Yashjain329/Decision-Drift-Gate), branch `master`, under the user's implementation/submission authorization. Local and remote release SHA matched `8d5ca14895bd05b638ee37614cf35c7c989b9533`.
+
+Root cloned that commit from GitHub into a new task-owned temporary directory and ran the documented Recorded proposal → validation → approval → comparison lifecycle with provider credentials removed from subprocess environments. Regression and unseen regression returned FAILED/exit 1; exception returned PASSED_CHECKS/exit 0; policy edit returned INCOMPLETE/exit 2. Actual server startup, HTML/session injection and approved API state passed. The fresh clone's full 15-case matrix also matched all expectations. [Remote reproduction evidence](../../../evidence/remote-reproduction.json) records its exact source and synthetic comparison hashes.
+
+This final documentation/evidence update changes no implementation files relative to that reproduced source. Root confirmed `ddg`, `web`, `scripts` and `tests` have no changes relative to the clean fully tested implementation. No redundant full-suite rerun was needed for documentation-only changes.
+
+Before publication, the tracked-file/relative-link audit passed with no generated repositories, `.env`, virtual environment or session outputs tracked. Exact-key scanning found zero occurrences in publishable files and all 118 historical blobs inspected. Local credentials remain ignored; the source includes a blank-key example only.
 
 The supported product is one trusted synthetic Python job-client adapter and a DEC-001 → DEC-002 replacement. The evaluator targets its default CHK-001 fixtures. There is no arbitrary-repository sandbox, authenticated multiuser approval, live GitHub PR integration, general decision translation, established buyer demand or measured human saving.

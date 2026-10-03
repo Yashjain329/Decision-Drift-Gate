@@ -1,0 +1,36 @@
+{
+  "source_commit": "8d5ca14895bd05b638ee37614cf35c7c989b9533",
+  "provider_credentials_present": false,
+  "documented_cli_lifecycle": "passed",
+  "outcomes": {
+    "regression": {
+      "aggregate": "FAILED",
+      "exit": 1,
+      "base_sha": "c7af77a76e3c017dc81fce10095a678b8053fb6f",
+      "head_sha": "5ab1769b010d04e14a5c58bb8bcd456d8c69b8ff"
+    },
+    "unseen-regression": {
+      "aggregate": "FAILED",
+      "exit": 1,
+      "base_sha": "c7af77a76e3c017dc81fce10095a678b8053fb6f",
+      "head_sha": "142ad14118c2d6e7ed0558e58f9e277173edb01a"
+    },
+    "exception": {
+      "aggregate": "PASSED_CHECKS",
+      "exit": 0,
+      "base_sha": "c7af77a76e3c017dc81fce10095a678b8053fb6f",
+      "head_sha": "64b3d681550c7d6529ace56cd398af9a05ecf5bc"
+    },
+    "policy-edit": {
+      "aggregate": "INCOMPLETE",
+      "exit": 2,
+      "base_sha": "c7af77a76e3c017dc81fce10095a678b8053fb6f",
+      "head_sha": "866cbe9352f554e66422a25bf057248f42b6da74"
+    }
+  },
+  "fresh_server_http": "passed",
+  "case_matrix": {
+    "cases": 15,
+    "matched": 15
+  }
+}

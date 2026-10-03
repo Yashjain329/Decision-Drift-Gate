@@ -47,3 +47,5 @@ The prior successful live capture and the later timed-out browser request are se
 [reviewer-observations.csv](reviewer-observations.csv) contains headers only. No review-time savings, participant feedback or timed speaking rehearsal have been measured. Video recording remains pending. Use [the protocol](../docs/HUMAN_EVALUATION.md) to collect those observations.
 
 [Phase status](../docs/phases/STATUS.md) and [evaluation](../docs/EVALUATION.md) record final tests, release and fresh-checkout reproduction separately from these artifacts.
+
+[remote-reproduction.json](remote-reproduction.json) records fresh GitHub clone `8d5ca14895bd05b638ee37614cf35c7c989b9533`: documented Recorded CLI lifecycle, correct regression/exception/policy exits, real local server/assets and all 15 expected case outcomes. Provider credentials were removed from command environments. The final documentation update retains identical implementation files. Root's full suite passed 110 tests in 280.603 seconds on implementation `c3feee81c6403361e449ec677accf97a7e27d899`.
