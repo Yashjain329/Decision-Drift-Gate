@@ -1,6 +1,8 @@
 import copy
 import json
 import os
+import threading
+import time
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -137,6 +139,28 @@ class ProposalTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "provider") as raised:
                 propose(self.context, "live", client=Broken())
         self.assertNotIn("do-not-leak", str(raised.exception))
+
+    def test_blocked_provider_call_returns_at_hard_deadline_without_accepting_late_result(self):
+        started = threading.Event()
+        release = threading.Event()
+
+        class SlowInteractions:
+            def create(self, **_kwargs):
+                started.set()
+                release.wait(0.15)
+                return SimpleNamespace(output_text=json.dumps({"status": "DRAFT", "check": MANUAL, "reason": "late"}))
+
+        client = SimpleNamespace(interactions=SlowInteractions())
+        began = time.monotonic()
+        try:
+            with patch("ddg.proposal._PROVIDER_CALL_DEADLINE_SECONDS", 0.03, create=True):
+                with patch.dict(os.environ, {"DDG_GEMINI_MODEL": "gemini-3.8-flash", "GEMINI_API_KEY": "fake-test-key"}):
+                    with self.assertRaisesRegex(ValueError, "timed out"):
+                        propose(self.context, "live", client=client)
+            self.assertTrue(started.is_set())
+            self.assertLess(time.monotonic() - began, 0.12)
+        finally:
+            release.set()
 
     def test_recorded_capture_requires_matching_content_inputs_and_provenance(self):
         capture = wrap_draft(self.context, MANUAL, mode="live", model="gemini-3.8-flash")

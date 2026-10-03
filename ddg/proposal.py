@@ -6,6 +6,8 @@ import copy
 import importlib.metadata
 import json
 import os
+import queue
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,7 @@ from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisio
 from .gitio import list_at, read_at, resolve_commit
 
 PROMPT_VERSION = "ddg_check_proposal_v1"
+_PROVIDER_CALL_DEADLINE_SECONDS = 30
 VOCABULARY = {
     "scenarios": ["commit_then_503", "reject_then_503"],
     "metrics": {
@@ -259,7 +262,11 @@ def _parse_response(output: str) -> dict:
     return response
 
 
-def _provider_call(client: Any, model: str, prompt: str) -> str:
+class _ProviderDeadlineExceeded(Exception):
+    pass
+
+
+def _provider_request(client: Any, model: str, prompt: str) -> str:
     result = client.interactions.create(
         model=model,
         input=prompt,
@@ -270,6 +277,32 @@ def _provider_call(client: Any, model: str, prompt: str) -> str:
     if not isinstance(output, str):
         raise ValueError("Provider returned no text output")
     return output
+
+
+def _provider_call(client: Any, model: str, prompt: str) -> str:
+    """Bound total wall time even when SDK retries outlive its HTTP timeout."""
+    completed: queue.Queue[tuple[bool, Any]] = queue.Queue(maxsize=1)
+
+    def call() -> None:
+        try:
+            completed.put_nowait((True, _provider_request(client, model, prompt)))
+        except BaseException as exc:
+            # The worker only transfers an immutable result/exception; proposal and
+            # session state are built exclusively by the waiting caller.
+            try:
+                completed.put_nowait((False, exc))
+            except queue.Full:
+                pass
+
+    worker = threading.Thread(target=call, name="ddg-provider-request", daemon=True)
+    worker.start()
+    try:
+        succeeded, result = completed.get(timeout=_PROVIDER_CALL_DEADLINE_SECONDS)
+    except queue.Empty as exc:
+        raise _ProviderDeadlineExceeded from exc
+    if not succeeded:
+        raise result
+    return result
 
 
 def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
@@ -310,8 +343,10 @@ def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
     for attempt_number in (1, 2):
         try:
             raw = _provider_call(client, model, _prompt(context, repair))
-        except Exception as exc:
-            raise ValueError("Proposal provider request failed") from exc
+        except _ProviderDeadlineExceeded:
+            raise ValueError("Proposal provider request timed out") from None
+        except Exception:
+            raise ValueError("Proposal provider request failed") from None
         try:
             response = _parse_response(raw)
             check = validate_citations(response["check"], _proposal_decisions(context))

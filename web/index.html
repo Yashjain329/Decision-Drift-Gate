@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="ddg-session-token" content="__DDG_SESSION_TOKEN__">
+  <meta name="color-scheme" content="light">
+  <title>Decision Drift Gate</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="topbar">
+    <a class="brand" href="#decision" aria-label="Decision Drift Gate home">
+      <span class="brand-mark" aria-hidden="true">D</span>
+      <span>Decision Drift Gate</span>
+    </a>
+    <div class="top-meta"><span class="connection-dot" aria-hidden="true"></span><span id="connection-label">Connecting to local demo</span></div>
+  </header>
+  <div class="shell">
+    <aside class="rail" aria-label="Workflow">
+      <p class="eyebrow">WORKSPACE</p>
+      <nav class="workflow-nav" aria-label="Demo views">
+        <button class="nav-item" type="button" data-view="decision"><span class="nav-index">01</span><span>Decision change</span><span class="nav-state" id="decision-nav-state">Ready</span></button>
+        <button class="nav-item" type="button" data-view="approval"><span class="nav-index">02</span><span>Approve check</span><span class="nav-state" id="approval-nav-state">Pending</span></button>
+        <button class="nav-item" type="button" data-view="review"><span class="nav-index">03</span><span>Review change</span><span class="nav-state" id="review-nav-state">Not run</span></button>
+      </nav>
+      <div class="rail-note">
+        <p class="eyebrow">SYNTHETIC DEMO</p>
+        <p>One versioned decision, one calibrated check, one observed result.</p>
+      </div>
+      <div class="rail-footer"><span class="local-lock" aria-hidden="true"></span>Runs on this machine</div>
+    </aside>
+
+    <main id="main" class="main-area" tabindex="-1">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+      <section class="view" id="view-decision" aria-labelledby="decision-title" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">DECISION HISTORY</p><h1 id="decision-title">A rule changed.<br>Make the reason executable.</h1></div>
+          <span id="decision-mode" class="mode-label">Synthetic records</span>
+        </div>
+        <div class="decision-grid">
+          <article class="decision-card old-card">
+            <div class="card-top"><span class="eyebrow">REPLACED</span><span class="status-badge status-muted">DEC-001</span></div>
+            <h2 id="old-decision-title">Previous rule</h2>
+            <p id="old-decision-rule" class="decision-rule">Loading decision history…</p>
+            <p id="old-decision-exceptions" class="supporting-copy"></p>
+          </article>
+          <div class="change-arrow" aria-hidden="true">→</div>
+          <article class="decision-card new-card">
+            <div class="card-top"><span class="eyebrow">ACTIVE</span><span class="status-badge status-good">DEC-002</span></div>
+            <h2 id="new-decision-title">Replacement rule</h2>
+            <p id="new-decision-rule" class="decision-rule">Loading decision history…</p>
+            <p id="new-decision-exceptions" class="supporting-copy"></p>
+          </article>
+        </div>
+        <div class="decision-footer">
+          <div><span class="eyebrow">WHY THIS MATTERS</span><p>A service may accept a request before its acknowledgement arrives. Retrying can create a second job.</p></div>
+          <button class="button button-primary" type="button" data-go="approval">Draft a check <span aria-hidden="true">→</span></button>
+        </div>
+        <details class="evidence disclosure">
+          <summary>Decision provenance and source revision</summary>
+          <pre id="decision-evidence"></pre>
+        </details>
+      </section>
+
+      <section class="view" id="view-approval" aria-labelledby="approval-title" hidden>
+        <div class="page-heading compact-heading">
+          <div><p class="eyebrow">CALIBRATED BEHAVIOR</p><h1 id="approval-title">Approve the check</h1><p class="lede">The check must catch a duplicate, pass on corrected behavior, and accept the documented exception.</p></div>
+          <span id="lifecycle-label" class="mode-label">No approved check</span>
+        </div>
+        <div class="approval-layout">
+          <div class="approval-main">
+            <div class="control-row">
+              <label class="field-label" for="proposal-mode">Proposal source</label>
+              <select id="proposal-mode" name="proposal-mode">
+                <option value="live">Live proposal</option>
+                <option value="recorded">Recorded proposal</option>
+              </select>
+              <button class="button button-secondary" id="propose-button" type="button">Draft proposal</button>
+            </div>
+            <div class="source-line"><span id="proposal-source-label" class="status-badge status-muted">No proposal loaded</span><span id="proposal-provenance" class="muted"></span></div>
+            <div class="check-preview">
+              <div class="card-top"><span class="eyebrow">PROPOSED CHECK</span><span id="check-id" class="mono muted">Not recorded</span></div>
+              <p id="check-rationale" class="check-rationale">Draft a proposal to inspect its scenario, assertions and decision citation.</p>
+              <div id="assertions" class="assertion-list" aria-label="Check assertions"></div>
+              <div class="citation"><span class="eyebrow">GROUNDED IN</span><p id="check-citation">No citation loaded.</p></div>
+            </div>
+            <details class="evidence disclosure">
+              <summary>Draft and provenance details</summary>
+              <pre id="draft-evidence"></pre>
+            </details>
+          </div>
+          <aside class="approval-side">
+            <div class="calibration-card">
+              <div class="card-top"><h2>Calibration</h2><span id="validation-status" class="status-badge status-muted">Not run</span></div>
+              <div class="calibration-row"><span>Known-bad implementation</span><b id="cal-bad">Not run</b></div>
+              <div class="calibration-row"><span>Corrected implementation</span><b id="cal-good">Not run</b></div>
+              <div class="calibration-row"><span>Stable-key exception</span><b id="cal-exception">Not run</b></div>
+              <p id="calibration-explanation" class="supporting-copy">Validation executes the proposal against all three fixtures.</p>
+              <button class="button button-secondary full-button" id="validate-button" type="button" disabled>Validate proposal</button>
+            </div>
+            <form id="approval-form" class="reviewer-form">
+              <h2>Developer approval</h2>
+              <label for="reviewer">Reviewer</label>
+              <input id="reviewer" name="reviewer" autocomplete="name" required maxlength="160" placeholder="Your name">
+              <label for="reason">Review note</label>
+              <textarea id="reason" name="reason" rows="3" required maxlength="2000" placeholder="Why is this check ready to approve?"></textarea>
+              <button class="button button-primary full-button" id="approve-button" type="submit" disabled>Approve exact check</button>
+              <p class="form-note">Approval records this check and its calibration in the local demo repository.</p>
+            </form>
+          </aside>
+        </div>
+        <details class="evidence disclosure"><summary>Validation evidence</summary><pre id="validation-evidence"></pre></details>
+      </section>
+
+      <section class="view" id="view-review" aria-labelledby="review-title" hidden>
+        <div class="page-heading review-heading">
+          <div><p class="eyebrow">APPROVED CHECK · FRESH EXECUTION</p><h1 id="review-title">Review the change</h1></div>
+          <div class="review-heading-meta">
+            <span id="review-check-id" class="mode-label">No approved check</span>
+            <span id="proposal-mode-stamp" class="mode-label">Proposal source unknown</span>
+            <span id="approval-identity" class="mode-label">Reviewer not recorded</span>
+            <span id="report-freshness" class="mode-label">Not run</span>
+          </div>
+        </div>
+        <div class="review-toolbar">
+          <label class="field-label" for="scenario-select">Candidate change</label>
+          <select id="scenario-select" name="scenario"></select>
+          <button class="button button-primary" id="run-button" type="button" disabled>Run approved check</button>
+          <p id="stale-notice" class="stale-notice" hidden>Inputs changed since this report. Rerun required.</p>
+        </div>
+        <div id="empty-review" class="empty-state">
+          <p class="eyebrow">NO EXECUTION YET</p><h2>Run a candidate to see what the approved check observes.</h2><p>Results appear here only after the local engine completes.</p>
+        </div>
+        <div id="review-content" hidden>
+          <div class="hero-result">
+            <div class="result-main"><span class="eyebrow">OBSERVED VERDICT</span><strong id="verdict" class="verdict-text">NOT RUN</strong><p id="verdict-summary">No current report.</p></div>
+            <div class="job-count"><span class="eyebrow">OPERATION / JOBS</span><div><strong id="operation-count">1</strong><span class="count-divider">/</span><strong id="job-count">—</strong></div><p id="job-count-label">Observed created jobs</p></div>
+          </div>
+          <div class="review-grid">
+            <article class="evidence-card ordinary-card"><div class="card-top"><h2>Ordinary tests</h2><span id="ordinary-status" class="status-badge status-muted">Not run</span></div><p>Happy-path submissions without a simulated acknowledgement failure.</p><div class="ordinary-metrics"><div><span class="eyebrow">TARGET</span><b id="ordinary-base">Not run</b></div><div><span class="eyebrow">CANDIDATE</span><b id="ordinary-head">Not run</b></div></div></article>
+            <article class="evidence-card decision-evidence-card"><div class="card-top"><h2>Governing decision</h2><span id="governing-id" class="status-badge status-good">Not loaded</span></div><p id="governing-rule">The report will show the active rule from the approved base.</p><a class="text-link" href="#decision" data-go="decision">View decision history</a></article>
+          </div>
+          <article class="timeline-card"><div class="card-top"><h2>Service timeline</h2><span id="timeline-summary" class="muted">Observed events</span></div><ol id="timeline" class="timeline"></ol></article>
+          <details class="evidence disclosure"><summary>Hashes, approval and execution details</summary><pre id="report-evidence"></pre></details>
+        </div>
+      </section>
+      <footer class="workspace-footer"><span>Decision Drift Gate</span><span>Evidence from pinned local Git revisions</span></footer>
+    </main>
+  </div>
+</body>
+</html>
