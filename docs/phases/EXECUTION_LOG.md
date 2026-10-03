@@ -24,3 +24,11 @@ Phase 01 accepted in commits `84546e6` and `2bd447b`. Independent fresh unittest
 - Malformed worker status values must yield ERROR observations rather than TypeError. Add strict type checks before enum membership.
 - Dynamic import/execution mechanisms are outside the supported adapter vocabulary. Reject them explicitly; do not claim these AST checks sandbox malicious source.
 - Provider model listing succeeded using the locally configured key without displaying it; gemini-3.8-flash is available. This proves access, not a successful proposal capture.
+
+## Phase 02 evidence and review
+
+Real proposal capture succeeded at `2026-10-03T18:19:56.974766Z` using Gemini `gemini-3.8-flash` and SDK `2.28.0`. The sanitized response is committed in `e3147be`. Independent rebuilt-history replay matched its content digest and retained recorded provenance. The orchestrator's fresh focused proposal/contracts/governance suite passed 28 tests in 26.492 seconds.
+
+Review tightened citations to the two actual provider input decisions and preserved the sanitized captured response in replay. Approval review corrected strict schema/observation types, provenance validation and generic check-ID activation. Local reviewer names are attestation labels, not authenticated identities or human participant evidence.
+
+Phase 02 accepted after independent Sol review and root's fresh full suite: 70 tests passed in 139.355 seconds. Delivered commits `e3147be` and `03916d4`. Phase 03 dispatched parallel Luna engine and CLI/report workers; root retains README/status/docs ownership.

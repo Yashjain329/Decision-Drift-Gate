@@ -2,7 +2,7 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status:** foundation implemented and independently verified (34 tests); AI proposal and approval are in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Planning date:** 3 October 2026.
+**Status:** foundation, real Gemini proposal, calibration and approval implemented; 70 tests passed. Review engine and CLI are in progress. **Hackathon:** selected for the top 25 from 125 entries, as reported by the team. **Next-round deliverables:** live demo, documentation, and GitHub source repository. **Planning date:** 3 October 2026.
 
 ## What we will demonstrate
 
