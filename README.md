@@ -22,6 +22,7 @@ flowchart LR
 
 ## Read these first
 
+- [Owner's walkthrough](WALKTHROUGH.md): project flow, Git access, commits, PR review, approvals, and edge cases.
 - [Phased execution roadmap](PHASES.md): five phases with GPT 6.1 Sol High orchestrating and GPT 6 Luna implementing.
 - [Phase status](docs/phases/STATUS.md): actual dispatch, review and completion evidence.
 - [Design specification](docs/superpowers/specs/2026-10-03-decision-drift-gate-design.md): scope, architecture, check format, approval, failure states, and evidence requirements.
