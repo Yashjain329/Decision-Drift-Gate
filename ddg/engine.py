@@ -12,7 +12,7 @@ from .approval import verify_bundle
 from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
 from .gitio import changed_paths_at, diff_at, list_at, read_at, resolve_commit
 from .harness import observe_happy_path
-from .proposal import validate_citations
+from .proposal import input_digest, load_context, validate_citations
 
 RUNNER_TIMEOUT_SECONDS = 10.0
 _DEFAULT_SOURCE = "src/job_client.py"
@@ -165,6 +165,16 @@ def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[di
                 raise ValueError("Approved check is missing its validation or approval record")
             if not verify_bundle(check, decision, validation, approval):
                 raise ValueError("Approved check bundle digest or calibration evidence is invalid")
+            try:
+                inputs = load_context(repo, decision["id"], validation["source_sha"], check["adapter"])
+                inputs["old_decision"] = decisions[decision["supersedes"]]  # base's record, not the pinned one
+                inputs["new_decision"] = decision
+                inputs_ok = input_digest(inputs) == validation["input_digest"]
+            except (ValueError, KeyError, TypeError):
+                # Fail closed: e.g. a squashed/shallow history without the pinned source commit.
+                raise ValueError("Pinned proposal source commit or its records are unavailable (shallow or rewritten history?)")
+            if not inputs_ok:  # binds the superseded predecessor and source the check was proposed from
+                raise ValueError("Approved proposal inputs differ from the repository record they were pinned to")
             try:
                 approver = identity.verify_approver(repo, base_sha, check_id)
             except identity.IdentityError as exc:
