@@ -92,7 +92,9 @@
       if (!payload || !payload.state) throw new Error('The server returned an invalid state response.');
       state.value = payload.state;
       render();
-      setNotice(route === 'run' ? 'Execution completed. The result below comes from this run.' : 'Change saved.', 'success');
+      setNotice(route === 'run'
+        ? (state.view === 'review' ? 'Execution completed. The result below comes from this run.' : 'Latest execution completed. Open Review change to see the result.')
+        : 'Change saved.', 'success');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'The local action failed.');
       try { await refresh(); } catch { /* keep the action error visible when a reload also fails */ }
@@ -260,7 +262,7 @@
     if (selectedMode === 'live' || selectedMode === 'recorded') byId('proposal-mode').value = selectedMode;
     safeText(byId('review-check-id'), draft?.check?.id || approval?.check_id, 'No approved check');
     safeText(byId('proposal-mode-stamp'), proposalLabel(draft, data.mode));
-    safeText(byId('approval-identity'), approval?.reviewer ? `Approved by ${approval.reviewer} (typed label)` : 'Reviewer not recorded');
+    safeText(byId('approval-identity'), approval?.reviewer ? `Review label: ${approval.reviewer}` : 'Reviewer not recorded');
     if (!draft) {
       setBadge(byId('proposal-source-label'), 'No proposal loaded', 'muted');
       safeText(byId('proposal-provenance'), 'Choose a proposal source to begin.');
@@ -294,11 +296,20 @@
     safeText(byId('calibration-explanation'), validation ? (isEligible ? 'All required behaviors matched the calibration contract.' : 'At least one required behavior did not match. Approval is unavailable.') : 'Validation executes the proposal against all three fixtures.');
     byId('validation-evidence').textContent = objectText(validation);
     const approved = Boolean(approval);
-    safeText(byId('lifecycle-label'), approved ? `Approved by ${approval.reviewer || 'reviewer'}` : validation ? (isEligible ? 'Awaiting developer approval' : 'Calibration needs work') : draft ? 'Draft ready for validation' : 'No approved check');
-    byId('approval-form').classList.toggle('is-approved', approved);
+    safeText(byId('lifecycle-label'), approved ? `Approved · label: ${approval.reviewer || 'not recorded'}` : validation ? (isEligible ? 'Awaiting developer approval' : 'Calibration needs work') : draft ? 'Draft ready for validation' : 'No approved check');
+    visible(byId('approval-form'), !approved);
+    visible(byId('approval-record'), approved);
+    if (approved) {
+      const author = data.report?.checks?.find((c) => c.approver?.verified)?.approver?.commits?.[0]?.author_email;
+      safeText(byId('rec-label'), approval.reviewer, 'Not recorded');
+      safeText(byId('rec-note'), approval.reason, 'Not recorded');
+      safeText(byId('rec-author'), author, 'Shown after a review run');
+      safeText(byId('rec-time'), approval.approved_at, 'Not recorded');
+      safeText(byId('rec-digest'), approval.bundle_digest, 'Not recorded');
+    }
     byId('reviewer').disabled = approved;
     byId('reason').disabled = approved;
-    byId('approve-button').textContent = approved ? 'Check approved' : 'Approve exact check';
+    byId('approve-button').textContent = 'Approve exact check';
     syncControls();
 
     const navState = (id, text, tone) => { const el = byId(id); safeText(el, text); el.closest('.nav-item').dataset.state = tone; };
@@ -442,7 +453,7 @@
       safeText(sbApprover, approver.verified ? `verified · ${approver.commits?.[0]?.author_email || 'git author'}` : 'UNVERIFIED');
       setTone(sbApprover, approver.verified ? 'good' : 'warn');
     } else {
-      safeText(sbApprover, approval?.reviewer ? `${approval.reviewer} (typed label)` : 'not recorded');
+      safeText(sbApprover, approval?.reviewer ? `${approval.reviewer} (label, unverified)` : 'not recorded');
       setTone(sbApprover, null);
     }
     const sbIso = byId('sb-isolation');
@@ -460,7 +471,7 @@
     const check = checks.find((entry) => entry.verdict !== 'HISTORICAL_CHECK_IGNORED') || checks[0] || null;
 
     const freshness = byId('report-freshness');
-    safeText(freshness, report ? (stale ? 'STALE · rerun required' : `Current · ${report.aggregate || 'complete'}`) : 'Not run');
+    safeText(freshness, report ? (stale ? 'STALE · rerun required' : `Current · ${({ PASSED_CHECKS: 'Passed', FAILED: 'Failed', INCOMPLETE: 'Incomplete' })[report.aggregate] || 'complete'}`) : 'Not run');
     setTone(freshness, !report ? null : stale ? 'warn' : report.aggregate === 'PASSED_CHECKS' ? 'good' : report.aggregate === 'FAILED' ? 'bad' : 'warn');
     safeText(byId('report-case'), scenarioLabel ? `Report for ${scenarioLabel}` : 'No report candidate');
     visible(byId('stale-notice'), Boolean(report && stale));
@@ -475,7 +486,7 @@
       return;
     }
     const gate = gateModel(report, stale, check);
-    safeText(byId('review-nav-state'), stale ? 'Rerun required' : report.aggregate);
+    safeText(byId('review-nav-state'), stale ? 'Rerun required' : gate.label[0] + gate.label.slice(1).toLowerCase());
     navItem.dataset.state = stale ? 'attention' : gate.tone === 'good' ? 'done' : gate.tone === 'bad' ? 'failed' : 'attention';
 
     safeText(byId('verdict'), gate.label);

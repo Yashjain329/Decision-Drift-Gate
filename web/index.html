@@ -121,6 +121,17 @@ FORM: Operate. Control-plane layout, step rail on the left, global readout bar o
               <button class="button button-primary full-button" id="approve-button" type="submit" disabled>Approve exact check</button>
               <p class="form-note">Approval writes this check and its calibration to the local demo repository. The reviewer name is a label; the Git author of the approval commit is what the gate verifies.</p>
             </form>
+            <section id="approval-record" class="panel reviewer-form is-approved" aria-labelledby="approval-record-title" hidden>
+              <h2 id="approval-record-title">Approval record</h2>
+              <dl class="record">
+                <dt>Review label</dt><dd id="rec-label">—</dd>
+                <dt>Review note</dt><dd id="rec-note">—</dd>
+                <dt>Verified Git author</dt><dd id="rec-author">Shown after a review run</dd>
+                <dt>Approved at</dt><dd id="rec-time">—</dd>
+                <dt>Bundle digest</dt><dd id="rec-digest" class="mono">—</dd>
+              </dl>
+              <p class="form-note">The review label is typed text. The gate trusts only the Git author of the approval commit.</p>
+            </section>
           </aside>
         </div>
         <details class="evidence disclosure"><summary>Validation evidence</summary><pre id="validation-evidence"></pre></details>
