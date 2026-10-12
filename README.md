@@ -2,57 +2,97 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status (12 October 2026):** a CLI and local browser prototype that is being turned into a tool for real repositories. At commit `bbb0e33` the suite has **144 tests** and the synthetic acceptance matrix has 15 cases (15/15 matched in the last recorded run, on an earlier commit; see [evidence](evidence/README.md)). Container isolation, two adapters and Git-based approver identity are in the code. Packaging, the real-repository CLI and the GitHub Action are being added; see [As of this release](#as-of-this-release-depends-on-parallel-work). No human evaluation has been done.
+**Status (12 October 2026, `master`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The test suite has **370 tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has been tested offline only; it has not run on GitHub.
 
 ![Actual browser execution: ordinary tests pass while an approved check observes duplicate jobs](evidence/browser-regression.jpg)
 
 ## What it does
 
-A team replaces a blanket retry rule after discovering that a request can succeed even when its response fails. AI reads the changed decision and drafts a structured behavioral check. A developer validates and approves it. Later code accidentally restores blind retries. Ordinary happy-path tests pass, but the approved check observes two jobs created for one operation and reports the failure with the replacement decision.
+A team replaces a blanket retry rule after discovering that a request can succeed even when its response fails. A model or a developer drafts a structured behavioral check from the changed decision. A developer validates and approves it. Later code accidentally restores blind retries. Ordinary happy-path tests pass, but the approved check observes two jobs created for one operation and reports the failure with the replacement decision.
 
 A passing result means the approved checks passed for the two recorded code revisions. Nothing more.
 
 ```mermaid
 flowchart LR
-    A[Changed decision] --> B[AI or developer drafts a check]
-    B --> C[Developer validates and approves in a signed commit]
-    C --> D[Base is authority: run checks on base and head in a container]
+    A[Changed decision] --> B[Model or developer drafts a check]
+    B --> C[Developer validates, then approves in a Git commit]
+    C --> D[Base is the authority: run checks on base and head in a container]
     D --> E[Report, exit code, decision history]
 ```
 
 ## Install
 
-Requirements: Python 3.12 or newer and Git. The core uses only the Python standard library.
-
-For checks that run code from a pull request you also need **Docker or Podman**. Without one, runs end as NOT_CHECKED (they do not fall back to the host).
-
-Today you run DDG from a source checkout:
+Requirements: Python 3.10 or newer (declared in `pyproject.toml`; only 3.12 has been tested), Git, and for checks that run pull-request code **Docker or Podman**. Without a container runtime, runs end as NOT_CHECKED. They never fall back to the host unless you set `DDG_SANDBOX=host`.
 
 ```powershell
-python -m ddg --help
+python -m pip install .            # core: standard library only
+python -m pip install ".[ai]"      # adds the Gemini SDK (only for the gemini_api provider)
+python -m pip install ".[bedrock]" # adds boto3 (only for the bedrock provider with AWS credentials)
+ddg --help                         # same as: python -m ddg --help
 ```
 
-A `ddg` command installed with pip is planned (see below).
+Other model providers (Anthropic, OpenAI-compatible servers, Claude Code, Codex and any command) need no extra package. See [model providers](docs/PROVIDERS.md).
 
-## Flow for a real repository
+## Use it on a real repository
 
-Each step says whether it works today.
+Every command below is exercised by `tests/test_cli_real.py` on a repository with no demo marker.
 
-1. **Initialise.** Create `.ddg/decisions/` with decision records, and `.ddg/approvers.json`:
+1. **Initialise.** `ddg init --repo <repo> --approver alice@example.com` writes `.ddg/approvers.json` (`require_signed` is `false` until you edit it) and the `.ddg/decisions/` folder. It refuses to overwrite an existing policy. Commit the result to your base branch and protect it ([threat model](docs/THREAT_MODEL.md)).
 
    ```json
    {"schema_version": 1, "require_signed": true, "approvers": ["alice@example.com"]}
    ```
 
-   Merge it to your base branch and protect it (see [threat model](docs/THREAT_MODEL.md)). A `ddg init` command that writes this for you is **planned**. Today you create the files by hand. The decision record shape is in `ddg/contracts.py`; `python -m ddg demo-init` shows a working example.
-2. **Propose.** `python -m ddg propose --repo <repo> --decision <id> --mode manual --check <file.json> --out <draft.json>` (works today). `--mode recorded` and `--mode live` only support the `python_job_client_v1` adapter. Use `manual` for `python_function_v1`.
-3. **Validate.** `python -m ddg validate --repo <repo> --draft <draft.json> --out <validation.json>` runs the check against known bad, good and exception revisions. **Today this reads those revisions from the generated-demo marker `.ddg-demo.json`, so it only works on demo repositories.** The `--calibration-*` flags that name your own revisions are **planned**.
-4. **Approve.** `python -m ddg approve --repo <repo> --draft <draft.json> --validation <validation.json> --reviewer <name> --reason <text>` writes the three files under `.ddg/checks`, `.ddg/validations` and `.ddg/approvals` (works today). It does not commit them (`--commit-demo` is for demos only).
-5. **Commit the approval, signed.** An approver commits exactly those three files and nothing else, for example `git add .ddg && git commit -S -m "Approve CHK-001"`. DDG rejects approval commits that touch other paths, that have an author outside `approvers.json`, or (when `require_signed` is true) that have no good signature. Configure `gpg.ssh.allowedSignersFile` or a GPG keyring on the runner.
-6. **Run.** `python -m ddg run --repo <repo> --base <base> --head <head> --out <report.json>` (works today). The base commit supplies the checks, decisions and approver list. The head commit supplies only the code under test.
-7. **Run in CI.** A GitHub Action is **planned**. Until then, call the command above in your own workflow with full history (`fetch-depth: 0`), on a runner with Docker or Podman.
+2. **Record the decisions.** One JSON file per decision in `.ddg/decisions/<id>.json`. The replaced decision has `"status": "superseded"`; the new one is `"active"` and names it in `supersedes`:
 
-Upgrading from the prototype? See [docs/UPGRADING.md](docs/UPGRADING.md).
+   ```json
+   {"schema_version": 1, "id": "DEC-002", "status": "active", "supersedes": "DEC-001",
+    "scope": "src/pricing.py", "rule": "discount must reject negative prices with ValueError.",
+    "exceptions": ["A zero price is valid and costs nothing."]}
+   ```
+
+3. **Propose a check.** Pick the adapter (below). For `python_function_v1`, write the check yourself and run:
+
+   ```powershell
+   ddg propose --repo <repo> --adapter python_function_v1 --mode manual --check check.json --out draft.json
+   ```
+
+   For `python_job_client_v1` you may use `--mode recorded` (bundled capture) or `--mode live` with a model provider. `--revision <commit>` selects the commit where the new decision is active (default `HEAD`). An example `check.json` is in [tests/test_adapters.py](tests/test_adapters.py) (`CHECK`).
+
+4. **Validate.** Name three commits of your own history: one where the rule is broken, one where it holds, and one with a valid exception:
+
+   ```powershell
+   ddg validate --repo <repo> --draft draft.json --out validation.json `
+     --calibration-bad <rev> --calibration-good <rev> --calibration-exception <rev>
+   ```
+
+   The check must fail on the bad commit and pass on the other two. Exit code 1 means not eligible.
+
+5. **Approve.** `ddg approve --repo <repo> --draft draft.json --validation validation.json --reviewer <name> --reason <text>` writes three files under `.ddg/checks`, `.ddg/validations` and `.ddg/approvals` and prints their paths. It does not commit.
+
+6. **Commit the approval.** An approver commits exactly those three files and nothing else, signed if you require it: `git add .ddg && git commit -S -m "Approve CHK-001"`. DDG checks the Git author, the touched paths and, when `require_signed` is true, the signature. Configure `gpg.ssh.allowedSignersFile` or a GPG keyring on every machine that runs DDG.
+
+7. **Run.** `ddg run --repo <repo> --base <base> --head <head> --out report.json`. The base commit supplies the checks, decisions and approver list. The head commit supplies only the code under test. Add `--sandbox docker|podman|host|auto` to choose isolation and `--format json|md|both` for the report files (default both).
+
+Upgrading from the earlier prototype? See [docs/UPGRADING.md](docs/UPGRADING.md).
+
+## Use it in GitHub Actions
+
+`action.yml` at the root of this repository is a composite action. It installs DDG, runs `ddg run` on the pull request's base and head, uploads the JSON and Markdown report, and posts or updates one PR comment.
+
+```yaml
+on: pull_request
+permissions: {contents: read, pull-requests: write}
+jobs:
+  ddg:
+    runs-on: ubuntu-latest        # needs Docker for the default sandbox
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0, persist-credentials: false}
+      - uses: ./        # inside this repository; from another repository use <owner>/<repo>@<ref> once published
+```
+
+Inputs: `base-ref`, `head-ref` (default: the PR base and head SHAs), `sandbox` (default `docker`), `python-version` (default `3.12`), `fail-on-incomplete` (default `true`), `post-comment` (default `true`). Exit code 1 fails the job; exit code 2 fails it unless `fail-on-incomplete` is `false`; any other code is an error. A fixture workflow is in `.github/workflows/ddg.yml`. Do not run it on fork code in a workflow that has secrets. Not yet verified on GitHub itself: the comment posting and the check conclusion.
 
 ## Adapters
 
@@ -60,10 +100,14 @@ An adapter says what a check can observe. The id is part of the approval digest.
 
 | Adapter | What it checks | Proposal source |
 |---|---|---|
-| `python_job_client_v1` | `submit_job(service, payload, operation_id)` in `src/job_client.py` against a fake service that can fail after creating a job | AI-assisted (recorded or live Gemini), or manual |
-| `python_function_v1` | One function in one stdlib-only module: return value or exception type for given arguments | Manual only. AI proposals refuse this adapter (`tests/test_adapters.py::test_ai_proposals_refuse_non_job_adapters`) |
+| `python_job_client_v1` | `submit_job(service, payload, operation_id)` in `src/job_client.py` against a fake service that can fail after creating a job | Model (recorded or live, any provider) or manual |
+| `python_function_v1` | One function in one stdlib-only module: return value or exception type for given JSON arguments (up to 50 cases) | Manual only. Model proposals refuse this adapter |
 
-Both adapters need a single stdlib-only module. See [architecture](docs/ARCHITECTURE.md).
+Both adapters run a single stdlib-only Python file. See [architecture](docs/ARCHITECTURE.md).
+
+## Model providers
+
+The model step is optional and only drafts a check; calibration and a human approval still decide whether it is used. Choose a provider with `DDG_PROVIDER` or `--provider`: `gemini_api` (default), `anthropic_api`, `openai_api` (also any OpenAI-compatible server through `OPENAI_BASE_URL`), `bedrock`, `claude_cli`, `codex_cli`, `custom_cli`. The CLI providers use your Claude Code or Codex subscription login instead of an API key. `ddg providers` lists them. Details, variables and limits: [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 ## Reading a report
 
@@ -83,121 +127,80 @@ Per check, the verdict compares base and head:
 | pass | pass | CHECK_PASSED |
 | error (either side) | any | NOT_CHECKED |
 
-INCOMPLETE also means: a check's approver could not be verified (`APPROVER_NOT_VERIFIED` warning), a bundle is invalid, an active decision has no check, or the head edits `.ddg/` policy files. Each INCOMPLETE reason is in the report warnings. Run `python -m ddg status` to learn whether a saved report is STALE because a ref moved.
+INCOMPLETE also means: a check's approver could not be verified (`APPROVER_NOT_VERIFIED` warning), a bundle or the history is invalid or unreadable, an active decision has no check, or the head edits `.ddg/` policy files. Each reason is in the report warnings. `ddg status` tells you whether a saved report is STALE because a ref moved.
 
 ## Exit codes
-
-`python -m ddg run` returns:
 
 | Code | Meaning |
 |---|---|
 | 0 | PASSED_CHECKS |
-| 1 | FAILED |
-| 2 | INCOMPLETE |
+| 1 | FAILED. Also: `validate` not eligible, `status` stale |
+| 2 | INCOMPLETE. The gate could not prove the change safe; never treat it as a pass |
+| 3 | Usage or infrastructure error: bad arguments, missing repository, unreadable file, no container runtime, or an unexpected crash |
 
-Today any usage or I/O error also returns 2 (`ddg/cli.py`), so 2 is ambiguous. **Planned:** exit code 3 for usage or infrastructure errors, so that 2 means only INCOMPLETE. `validate` returns 1 when the draft is not eligible; `status` returns 1 when a report is stale.
+Earlier versions returned 2 for usage errors. Scripts that treated 2 as "error" must now treat 3 as the error code.
 
 ## Environment variables
 
-| Variable | Effect | Where |
-|---|---|---|
-| `DDG_SANDBOX` | `auto` (default), `docker`, `podman` or `host`. `host` runs reviewed code without a container and is recorded as UNSAFE. | `ddg/sandbox.py` |
-| `DDG_SANDBOX_IMAGE` | Container image. Default `python:3.12-slim`. Prefer a digest-pinned image. | `ddg/sandbox.py` |
-| `DDG_ALLOW_UNVERIFIED_APPROVERS` | `1` lets a repository with no `.ddg/approvers.json` run; approvers are marked unverified. Do not use in CI. | `ddg/identity.py` |
-| `GEMINI_API_KEY`, `DDG_GEMINI_MODEL` | Live proposal mode only. Read from `.env`. Executing approved checks never needs them. | `ddg/proposal.py` |
-
-## As of this release (depends on parallel work)
-
-These items are being added by other work in the same batch. They are **not in the code at `bbb0e33`**. After merge, verify each with `python -m ddg --help` and the file list.
-
-- `pyproject.toml` and a `ddg` console script
-- `ddg init`
-- `--calibration-*` flags on `validate` (your own bad/good/exception revisions)
-- `--sandbox` and `--format` flags
-- Exit code 3 for usage or infrastructure errors
-- A GitHub Action (checkout of base and head, `ddg run`, report upload, PR comment, check conclusion)
-- Edge-case hardening and end-to-end tests
-
-The README sections above that mention these items will need the "planned" marks removed.
+| Variable | Effect |
+|---|---|
+| `DDG_SANDBOX` | `auto` (default), `docker`, `podman` or `host`. `host` runs reviewed code on the machine without a container and is marked UNSAFE in reports. `--sandbox` on `run` sets it. |
+| `DDG_SANDBOX_IMAGE` | Container image. Default `python:3.12-slim` (a tag, not a digest). A custom image must be pinned as `name@sha256:...` unless `DDG_SANDBOX_ALLOW_UNPINNED=1` is also set. |
+| `DDG_ALLOW_UNVERIFIED_APPROVERS` | `1` lets a repository with no `.ddg/approvers.json` run; approvers are marked unverified. Never use it in CI. |
+| `DDG_PROVIDER`, `DDG_MODEL`, `DDG_PROVIDER_TIMEOUT` | Model provider, model name and per-call limit (1 to 600 s). See [providers](docs/PROVIDERS.md). |
+| `GEMINI_API_KEY`, `DDG_GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AWS_BEARER_TOKEN_BEDROCK`, `DDG_AWS_REGION`, `DDG_CLI_COMMAND` | Provider credentials and settings. Read from the environment or a local `.env` (current directory first). Executing approved checks never needs them. |
 
 ## Run the browser demo
 
-Create a new synthetic repository and start the server:
+The browser interface is a local demo viewer for the synthetic scenario. It binds to this machine only.
 
 ```powershell
-python -m ddg demo-init --destination .ddg-demo
-python -m ddg serve --repo .ddg-demo --state-dir .ddg-state
+ddg demo-init --destination .ddg-demo
+ddg serve --repo .ddg-demo --state-dir .ddg-state
 ```
 
-Open `http://127.0.0.1:8765`. Choose **Draft a check**, select **Recorded proposal**, draft and validate it, then enter a reviewer and review note to approve the exact check. Run **Retry regression**, **Unseen helper regression**, and **Allowed idempotency exception**. The first two fail; the exception passes. For live generation, start the server with the optional virtual-environment Python after the setup below.
+Open `http://127.0.0.1:8765`. Choose **Draft a check**, select **Recorded proposal**, draft and validate it, then enter a reviewer and review note to approve the exact check. Run **Retry regression**, **Unseen helper regression**, and **Allowed idempotency exception**. The first two fail; the exception passes. If the demo already exists, start only the server; its saved approval and session resume. Use a new destination for another full lifecycle. Stop the server with Ctrl+C.
 
-If the demo already exists, start only the server; its saved approval and session resume. Use a new destination for another full lifecycle. Stop the server with Ctrl+C. It binds to this machine only.
-
-For the fast pitch, approve beforehand and begin on **Review change**. Disclose that approval was prepared earlier, then click **Run approved check** to execute fresh observations. Hashes, approval and execution details remain available in the evidence drawer.
+For the fast pitch, approve beforehand and begin on **Review change**. Disclose that approval was prepared earlier, then click **Run approved check** to execute fresh observations.
 
 ## Run the demo from the CLI
 
-The core and Recorded proposal mode need no Python dependencies or provider key.
+The core and Recorded proposal mode need no Python dependencies or provider key. Running the checks needs Docker or Podman (or `DDG_SANDBOX=host` for a trusted local demo).
 
 ```powershell
-python -m ddg demo-init --destination .ddg-demo
-python -m ddg propose --repo .ddg-demo --decision DEC-002 --mode recorded --out .ddg-state/draft.json
-python -m ddg validate --repo .ddg-demo --draft .ddg-state/draft.json --out .ddg-state/validation.json
-python -m ddg approve --repo .ddg-demo --draft .ddg-state/draft.json --validation .ddg-state/validation.json --reviewer Developer --reason "Reviewed bad, good and stable-key calibration" --commit-demo
-python -m ddg run --repo .ddg-demo --base approved-base --head regression --out .ddg-state/report.json
+ddg demo-init --destination .ddg-demo
+ddg propose --repo .ddg-demo --decision DEC-002 --mode recorded --out .ddg-state/draft.json
+ddg validate --repo .ddg-demo --draft .ddg-state/draft.json --out .ddg-state/validation.json
+ddg approve --repo .ddg-demo --draft .ddg-state/draft.json --validation .ddg-state/validation.json --reviewer Developer --reason "Reviewed bad, good and stable-key calibration" --commit-demo
+ddg run --repo .ddg-demo --base approved-base --head regression --out .ddg-state/report.json
 ```
 
-Use a new or empty destination; demo-init refuses existing content. `--commit-demo` creates the synthetic review branches and commits as `ddg-demo@example.invalid`, which `demo-init` lists in the demo's `.ddg/approvers.json`. Recorded mode uses the bundled capture from a real Gemini call and labels it accordingly. A manual sample requires `--mode manual --check examples/manual_check.json`.
+Use a new or empty destination; `demo-init` refuses existing content. `--commit-demo` creates the synthetic review branches and commits as `ddg-demo@example.invalid`, which `demo-init` lists in the demo's `.ddg/approvers.json`. Recorded mode uses the bundled capture from a real Gemini call and labels it accordingly. A manual sample needs `--mode manual --check examples/manual_check.json`.
 
 The regression returns exit 1 with one job at base and two at head, while ordinary happy-path observations pass. Inspect `--head exception`, `--head unrelated`, or `--head unseen-regression` for other outcomes.
 
 ```powershell
-python -m ddg status --repo .ddg-demo --base approved-base --head regression --report .ddg-state/report.json
+ddg status --repo .ddg-demo --base approved-base --head regression --report .ddg-state/report.json
 python -m unittest discover -s tests -v
 ```
 
-Status reports CURRENT or STALE without changing saved execution evidence. A stale report requires a fresh run. Container tests skip with a visible reason when no runtime exists, and the demo run itself needs Docker or Podman (or `DDG_SANDBOX=host` for a trusted local demo).
-
-## Live Gemini setup
-
-Live generation is optional; executing approved checks works offline.
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-ai.txt
-if (-not (Test-Path -LiteralPath .env)) { Copy-Item -LiteralPath .env.example -Destination .env }
-```
-
-If `.env` already exists, edit it instead of copying over it. Fill `GEMINI_API_KEY` locally and choose `DDG_GEMINI_MODEL`, the provider model identifier. The verified capture used `gemini-3.8-flash` with SDK `2.28.0`; model availability depends on the provider/account. Keep the key out of chat and Git.
-
-```powershell
-.\.venv\Scripts\python.exe -m ddg propose --repo .ddg-demo --decision DEC-002 --mode live --out .ddg-state/live-draft.json
-```
-
-Live mode calls Gemini and never silently switches to a recorded fixture on failure. Each interaction has a 30-second caller deadline; one schema/citation repair can require a second interaction. Choose Recorded explicitly if the provider is slow or unavailable. A proposal remains unapproved until successful calibration and explicit review.
+Container tests skip with a visible reason when no runtime exists. The tamper suite (`tests/test_tamper.py`) alone takes about 25 minutes; `python -m unittest discover -s tests -p "test_[!t]*.py"` runs everything else in about 13. After approving a demo you can run the deterministic case matrix: `python scripts/evaluate.py --repo .ddg-demo --out .ddg-evaluation`.
 
 ## Limitations
 
-- **One adapter is AI-assisted, the other is manual.** Only `python_job_client_v1` has AI proposals (recorded and live Gemini). `python_function_v1` checks are written by hand.
+- **Model drafting covers one adapter.** Only `python_job_client_v1` accepts model proposals. `python_function_v1` checks are written by hand.
 - **Target code is one stdlib-only module.** Both adapters run a single Python file that imports only the standard library. They do not understand arbitrary repositories, packages or all engineering decisions.
-- **Isolation is a container.** It limits network, filesystem writes, memory, CPU, processes and privilege. It does not stop kernel or runtime escapes. The static import screen is best-effort only. Read the [threat model](docs/THREAT_MODEL.md).
+- **The container is the security boundary, not the verdict's proof.** It limits network, filesystem writes, memory, CPU, processes and privilege for the host. It does not stop kernel or runtime escapes, and the static import screen is best-effort only. A revision under test can still return fabricated results for its own function, so DDG catches accidental regressions, not a determined malicious author. Read the [threat model](docs/THREAT_MODEL.md).
 - **Identity depends on your Git setup.** Author email is forgeable unless `require_signed` is true and signing keys are configured. A malicious approver or a compromised base branch is out of scope.
+- **Repositories must be ordinary SHA-1 Git repositories with full history.** SHA-256 repositories are rejected, shallow clones fail closed for approval history, and symlinks or submodules under `.ddg/` or at the checked source path make the run INCOMPLETE or NOT_CHECKED. Very large diffs are truncated for display only.
 - **No human evaluation yet.** No participant has used DDG in a comparison, and no review-time saving has been measured. The original 50% review-time reduction remains an unmeasured target. The acceptance matrix is a small authored set, not an independent benchmark.
 
 ## Documents
 
 - [Threat model](docs/THREAT_MODEL.md), [security policy](SECURITY.md), [changelog](CHANGELOG.md), [upgrade note](docs/UPGRADING.md)
-- [Architecture](docs/ARCHITECTURE.md), [evaluation](docs/EVALUATION.md), [evidence provenance](evidence/README.md), [human evaluation protocol](docs/HUMAN_EVALUATION.md)
-- [Productization plan](docs/PRODUCTIZATION_PLAN.md), [phase status](docs/phases/STATUS.md), [delivery checklist](docs/DELIVERY_CHECKLIST.md)
-- [Owner's walkthrough](WALKTHROUGH.md) (written for the prototype; parts such as "not a security sandbox" are out of date), [pitch and demo script](docs/PITCH_AND_DEMO.md), [phased execution roadmap](PHASES.md)
-- [Design specification](docs/superpowers/specs/2026-10-03-decision-drift-gate-design.md), [implementation plan](docs/superpowers/plans/2026-10-03-decision-drift-gate.md)
-
-After approving a demo, run the deterministic case matrix:
-
-```powershell
-python scripts/evaluate.py --repo .ddg-demo --out .ddg-evaluation
-```
-
-Results preserve expected and observed outcomes, revisions, check digests, metrics and errors. The timing CSV stays empty until actual human measurements are collected.
+- [Architecture](docs/ARCHITECTURE.md), [model providers](docs/PROVIDERS.md), [evaluation](docs/EVALUATION.md), [evidence provenance](evidence/README.md), [human evaluation protocol](docs/HUMAN_EVALUATION.md)
+- [End-to-end tests](tests/e2e/README.md), [productization plan](docs/PRODUCTIZATION_PLAN.md), [phase status](docs/phases/STATUS.md), [delivery checklist](docs/DELIVERY_CHECKLIST.md)
+- [Owner's walkthrough](WALKTHROUGH.md), [pitch and demo script](docs/PITCH_AND_DEMO.md), [phased execution roadmap](PHASES.md)
+- [Design specification](docs/superpowers/specs/2026-10-03-decision-drift-gate-design.md), [implementation plan](docs/superpowers/plans/2026-10-03-decision-drift-gate.md) (historical; written before the sandbox, adapters, identity and providers)
 
 GitHub repository: [Yashjain329/Decision-Drift-Gate](https://github.com/Yashjain329/Decision-Drift-Gate).

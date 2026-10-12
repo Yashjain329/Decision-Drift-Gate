@@ -2,7 +2,7 @@
 
 Updated: 5 October 2026.
 
-This guide explains the current prototype, who controls each step, and what happens when something goes wrong. Start here before following the detailed design or phase plans.
+This guide explains the original synthetic-demo walkthrough (written 4 October 2026 and updated 12 October). For installing and using DDG on a real repository, start with the [README](README.md). This guide explains the current prototype, who controls each step, and what happens when something goes wrong. Start here before following the detailed design or phase plans.
 
 ## 1. What are we building?
 
@@ -109,7 +109,7 @@ GitHub access uses your normal Git credentials. An accessible public repository 
 | `run` | Committed policy at base and committed code at both versions | Writes reports and temporary execution files. Does not commit, merge, or push. |
 | `status` | Saved report and current local references | Reports freshness. Does not rewrite the saved report. |
 
-DDG uses local Git commands. It does not automatically clone, fetch, poll GitHub, or push. Without `--commit-demo`, approval writes files but does not create a Git commit. The current validation workflow depends on the generated demo's calibration metadata, so removing that flag does not turn the prototype into generic repository onboarding.
+DDG uses local Git commands. It does not automatically clone, fetch, poll GitHub, or push. Without `--commit-demo`, approval writes files but does not create a Git commit. For a real repository (no demo marker), `ddg approve` writes the three files and prints their paths, and `ddg validate` takes `--calibration-bad`, `--calibration-good` and `--calibration-exception` instead of reading demo metadata. See the README. Inside the demo, the calibration refs still come from the generated demo's metadata.
 
 ## 4. Run your first complete demo
 
@@ -297,7 +297,7 @@ The next integration needs a GitHub App or CI workflow that fetches the exact ta
 
 The owner then configures a required status through GitHub's [protected branch settings](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches). The current DDG prototype neither creates that status nor configures those settings.
 
-Execution of unknown PR code needs an isolated runner with appropriate limits. The current local subprocess is not a security sandbox. Do not run fork code in a privileged workflow with secrets. GitHub explains this risk in its [pull_request_target security guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target). Approved-check execution needs no Gemini key.
+Execution of unknown PR code needs an isolated runner with appropriate limits. DDG now runs the code under test in a Docker or Podman container by default (no network, read-only filesystem, memory, CPU, process and privilege limits); `DDG_SANDBOX=host` runs it on the host and is marked UNSAFE. The container is the boundary; see the [threat model](docs/THREAT_MODEL.md). Do not run fork code in a privileged workflow with secrets. GitHub explains this risk in its [pull_request_target security guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target). Approved-check execution needs no Gemini key.
 
 Keep automated execution separate from policy approval. A PR that edits the policy must not grant itself authority.
 
@@ -399,9 +399,9 @@ For source behavior, start with [architecture](docs/ARCHITECTURE.md). Git reads 
 
 ## 11. What is verified, and what remains?
 
-The recorded release verification reports 110 passing tests and 15/15 matching acceptance cases. A fresh GitHub clone reproduced the Recorded lifecycle, local server, and case matrix without provider credentials. These are existing release records, not a claim that every command was rerun while writing this guide. See [phase status](docs/phases/STATUS.md), [release handoff](docs/phases/handoffs/PHASE_05.md), and [evidence provenance](evidence/README.md).
+The recorded 4 October release verification reports 110 passing tests and 15/15 matching acceptance cases. On 12 October the suite has 370 tests, all passing in the last full run, and the 15-case matrix matched 15 of 15 again in Docker mode. A fresh GitHub clone reproduced the Recorded lifecycle, local server, and case matrix without provider credentials. These are existing release records, not a claim that every command was rerun while writing this guide. See [phase status](docs/phases/STATUS.md), [release handoff](docs/phases/handoffs/PHASE_05.md), and [evidence provenance](evidence/README.md).
 
-Human review-time measurements, timed pitch rehearsals, and the final submission video remain pending in those records. The proposed 50% review-time saving is a target, not a measured result. GitHub automation and arbitrary-repository support remain future work.
+Human review-time measurements, timed pitch rehearsals, and the final submission video remain pending in those records. The proposed 50% review-time saving is a target, not a measured result. A GitHub Action now exists (`action.yml`) and has been tested offline only. Arbitrary-repository support is limited to the two adapters and to single stdlib-only Python modules.
 
 Before presenting, prepare an approved demo, run the regression and permitted exception, check the report SHAs, and choose whether the proposal is Live or Recorded. If approval was prepared beforehand, say so. Follow the [pitch and demo script](docs/PITCH_AND_DEMO.md) and [delivery checklist](docs/DELIVERY_CHECKLIST.md).
 

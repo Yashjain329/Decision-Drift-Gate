@@ -1,41 +1,46 @@
-# Productization plan
+# Productization plan and outcome
 
-**Decisions (12 Oct 2026):** CLI + GitHub Action; Docker/Podman isolation; pluggable adapters, Python first; approver identity from Git (signed commits + allowlist).
+**Decisions (12 October 2026):** CLI plus GitHub Action; Docker or Podman isolation; pluggable adapters, Python first; approver identity from Git (allowlist plus optional signatures); model providers beyond one vendor API, including CLI agents that use a subscription login.
 
-Each phase ships with its tests and is accepted only when its exit gate passes. No phase weakens an earlier gate.
+**Outcome on `master`:** P1 to P6 are done and verified by 370 passing tests (host and Docker modes) and a 15 of 15 acceptance run in Docker mode. P7 is partly done. Items not built are listed under each phase and in [the changelog](../CHANGELOG.md). Nothing here claims a human evaluation or a measured review-time saving; neither exists.
 
-## P1 Isolation (blocks everything else) - DONE
-- `ddg/sandbox.py`: run the worker in a container: `--network none --read-only --cap-drop ALL --security-opt no-new-privileges --pids-limit --memory --cpus --user nobody`, tmpfs scratch, code mounted read-only, hard wall-clock kill, container removed on every exit path.
-- Runtime selection: `docker` or `podman`; no silent host fallback. The old mode needs `DDG_SANDBOX=host` (a `--unsafe-host` flag was planned; the code uses the environment variable) and is recorded in every report.
-- Exit gate: escape attempts (network, write outside scratch, fork bomb, memory bomb, infinite loop, huge stdout) each yield `NOT_CHECKED`/`FAIL`, never a hang or a host effect.
+## P1 Isolation - done
+- `ddg/sandbox.py` runs the worker in a container: no network, read-only root, all capabilities dropped, `no-new-privileges`, PID, memory and CPU limits, non-root user, `noexec` tmpfs, source mounted read-only, wall-clock kill, container removed on every exit path.
+- No silent host fallback. Host mode needs `DDG_SANDBOX=host` (there is no `--unsafe-host` flag; `ddg run --sandbox host` sets the same thing) and is marked UNSAFE in reports.
+- Image policy: custom images must be digest-pinned unless `DDG_SANDBOX_ALLOW_UNPINNED=1`; `sandbox.describe()` reports whether the image is pinned.
+- Evidence: `tests/test_sandbox.py`, `tests/test_sandbox_more.py` (network, writes, memory bomb, infinite loop, fork bomb, output floods, closed stdin, leftover-container checks, `docker inspect` of the real limits, an exact-flag pin test). Podman parity tests exist and skip when Podman is absent.
+- Not done: wiring `sandbox.describe()` into reports.
 
-## P2 Adapter interface - DONE (job_client_v1, python_function_v1; AI proposals remain job-only)
-- `Adapter` protocol: `validate_check`, `scenarios`, `run(source, scenario) -> Observation`, `fingerprint`. Existing job-client logic becomes `adapters/job_client.py` unchanged in behaviour.
-- Second adapter: generic Python function-behaviour adapter (call a named function with declared inputs, assert on return value / exception type / call counts of declared fakes).
-- Adapter id and version are part of the approval digest.
-- Exit gate: the 15-case matrix still matches on the job adapter; a new matrix passes for the generic adapter.
+## P2 Adapter interface - done
+- `ddg/adapters/`: a registry whose modules must provide `NAME`, `validate_body`, `source_path`, `observe`, `ordinary`, `expected_case`. Adapters: `python_job_client_v1` and `python_function_v1`. The adapter id is part of the approval digest.
+- Not done: model proposals for `python_function_v1`; adapters for other languages; call-count assertions on declared fakes.
 
-## P3 Identity and approval - DONE (author allowlist, mixed-path rule, signature check; no PR-review binding)
-- Approval is a commit touching only `.ddg/approvals|checks|validations`, authored by a member of `.ddg/approvers` (read from **base**), with a verified SSH/GPG signature when `require_signed: true`.
-- Remove typed-name trust. Reports show the verified author and signature status.
-- Exit gate: unsigned, wrong-author, mixed-path and force-pushed-history approvals are rejected.
+## P3 Identity and approval - done
+- `ddg/identity.py`: `.ddg/approvers.json` at base; author allowlist; approval commits may touch only the three artifact folders; optional good-signature requirement; full-history walk; evidence in reports.
+- Not done: binding approval to a GitHub pull request review.
 
-## P4 Packaging and CI - in progress (batch run)
-- `pyproject.toml`, `ddg` console script, pinned optional `[ai]` extra, versioned sandbox image built from a pinned base.
-- GitHub Action (composite): checks out base+head, runs `ddg run`, uploads JSON/Markdown report, posts a PR comment and a check conclusion (`success/failure/neutral` for INCOMPLETE).
-- Exit-code contract documented and tested (0 pass, 1 failed, 2 incomplete, 3 usage/infra).
-- Exit gate: workflow passes on a fixture repository in CI for regression, correction, exception and policy-edit PRs.
+## P4 Packaging and CI - done except as noted
+- `pyproject.toml` with the `ddg` script and `[ai]` and `[bedrock]` extras (installed and run in a fresh virtual environment); `Dockerfile` with a digest-pinned base; `ddg init`; `--calibration-*`, `--sandbox`, `--format`; exit codes 0, 1, 2, 3.
+- GitHub Action (`action.yml`, `scripts/pr_comment.py`, `.github/workflows/ddg.yml`), tested offline.
+- Not done: running the Action on GitHub (comment posting and check conclusion are unverified there); an input to pin the sandbox image; moving the top-level `web` and `evidence` packages under `ddg/`.
 
-## P5 Edge-case hardening - in progress (batch run)
-Enumerated and each covered by a test: shallow clones, detached heads, merge commits, renamed/deleted/binary source, CRLF, non-UTF-8, symlinks and submodules in `.ddg`, huge diffs, SHA-256 repos, concurrent runs, report written to read-only path, clock skew, provider outage / malformed model output / prompt-injection text inside decisions, duplicate decision ids, supersession cycles, check referencing a superseded decision, stale reports after force-push.
+## P5 Edge-case hardening - done
+Covered by tests: shallow clones, detached heads, merge commits, renamed, deleted, binary, empty and non-UTF-8 source, CRLF, symlinks and submodules (under `.ddg` and as source), huge diffs, SHA-256 repositories (rejected), history rewrite after approval, hostile repository configuration, duplicate decision ids, supersession cycles, a check naming a superseded decision, length caps and odd Unicode, prompt-injection text in decisions, report writing to bad paths and concurrent writers, report escaping, concurrent `compare` calls, stale reports after force-push, and clock skew.
+- Known gaps: the function adapter compares nested values by equality (a nested `1.0` or `True` can match `1`); secret redaction works on serialized text; a newline in a filename could not be tested on Windows; the hostile `gpg.program` hardening has no control test.
 
-## P6 End-to-end suite - in progress (batch run)
-- `tests/e2e/`: fresh temp repo -> `ddg init` -> propose (recorded) -> validate -> approve (signed) -> PR branches -> `ddg run` in container -> assert exit codes and report contents. Runs in CI on Linux; container tests auto-skip with a visible reason when no runtime exists.
-- Browser e2e (Playwright) for the local viewer: full lifecycle, stale report, narrow viewport.
-- Mutation-style negative suite: every tampering of check, validation, approval, decision or head policy must change the verdict to `INCOMPLETE`.
+## P6 End-to-end suite - done except as noted
+- `tests/e2e/`: the real CLI as subprocesses in host and Docker modes (demo lifecycle, ten scenario branches, function adapter, unapproved author, stale report, `serve` over HTTP). `tests/test_cli_real.py` covers a new repository with no demo marker.
+- `tests/test_tamper.py`: every JSON field of the authority files mutated one at a time (35 tests, about 25 minutes).
+- Not done: browser (Playwright) tests of the viewer.
 
-## P7 Release - in progress (batch run; docs: threat model, SECURITY.md, CHANGELOG, UPGRADING written; SBOM and pinned image digest not yet)
-- Versioning, CHANGELOG, SBOM, image digest pinned in the Action, security policy, threat model document, upgrade path for existing approved bundles.
+## P7 Release - partly done
+- Done: `CHANGELOG.md`, `SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/UPGRADING.md`, `docs/PROVIDERS.md`, versioned package (`0.1.0`).
+- Not done: SBOM; a tagged release; the Action pinning an image digest.
+
+## P8 Model providers - done
+- `ddg/providers/`: Gemini API, Anthropic API, OpenAI-compatible, Bedrock, Claude Code CLI, Codex CLI and any command. Provider, model, client version and time limit are recorded in the draft. See [PROVIDERS.md](PROVIDERS.md).
+- Verified by 38 tests in `tests/test_providers.py` (33 unit tests with fake transports and scripts, and 5 full-lifecycle tests with non-Gemini providers), and one manual run each of `claude_cli` and `codex_cli` with a trivial prompt. Not verified: any API provider against its real service, Bedrock, or a full proposal on a real decision through a CLI agent.
+- Considered and rejected: depending on a separate routing service. A single human-approved proposal per decision does not need cost-based routing, a ledger or reservations.
 
 ## Not in scope
 Hosted multi-tenant service, JS/TS/Go adapters, auto-merge or auto-fix behaviour.

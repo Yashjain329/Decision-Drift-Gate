@@ -1,6 +1,6 @@
 # Upgrading existing approved bundles
 
-This note is for repositories that approved checks before approver identity existed (the 4 October 2026 prototype and earlier). It describes the code at commit `bbb0e33` or later.
+This note is for repositories that approved checks before approver identity existed (the 4 October 2026 prototype and earlier). It describes the code on `master` as of 12 October 2026.
 
 ## What changed
 
@@ -51,7 +51,7 @@ These become INCOMPLETE. Git history cannot be edited without changing the base,
 3. Merge that commit to base.
 4. Remove the old check's three files in a reviewed change, so the INCOMPLETE warning goes away.
 
-Steps 1 and 2 use the commands in the [README](../README.md). The validation step currently needs the generated-demo marker; see the README section "Planned for real repositories". I did not test re-approval on a non-demo repository; verify it after the CLI changes merge.
+Steps 1 and 2 use the commands in the [README](../README.md): `ddg propose`, `ddg validate` with `--calibration-bad/--calibration-good/--calibration-exception` naming your own commits, then `ddg approve`. This sequence is exercised on a repository with no demo marker by `tests/test_cli_real.py`. Re-approving a bundle that an earlier approver had approved was not separately tested.
 
 ## Reports
 
@@ -60,3 +60,15 @@ Reports now include an `approver` entry per check and a top-level `sandbox` fiel
 ## Isolation
 
 Runs now need Docker or Podman. If neither works, checks end NOT_CHECKED. To keep the old unsafe behaviour for a trusted local repository, set `DDG_SANDBOX=host`. Reports then say the code ran on the host.
+
+## Exit codes
+
+`ddg run` now returns 3 for usage and infrastructure errors (bad arguments, missing repository, unreadable file, no container runtime, unexpected crash). Earlier versions returned 2 for those, which collided with INCOMPLETE. Update CI scripts that map 2 to "error": 2 now means only INCOMPLETE.
+
+## Packaging
+
+Install with `pip install .` to get the `ddg` command. Source checkouts still work with `python -m ddg`. Code that imported `ddg.cli` internals should note that `propose` now accepts `--provider` and `--model`, and that the live proposal time limit is recorded in the draft (`request_metadata.timeout_seconds`, with an optional `provider` field). Drafts and captures written by earlier versions still validate.
+
+## Reports
+
+Reports for function-adapter runs have `ordinary_tests: {}`, and `adapter_version` may list several adapter ids separated by commas.

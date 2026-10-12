@@ -30,10 +30,12 @@ The local application does not provide a GitHub PR integration, arbitrary-reposi
 
 ## Addendum 12 October 2026
 
-The text above describes the prototype. Since commit `bbb0e33`:
+The text above describes the prototype. On `master` today:
 
-- The statement "process separation does not make untrusted code safe" is still true of the static import screen. Workers now also run in a container, which limits network, filesystem writes, memory, CPU, processes and privilege. It does not stop kernel or runtime escapes. See [threat model](THREAT_MODEL.md).
-- The evaluation matrix uses the adapter `python_job_client_v1`. A second adapter, `python_function_v1`, has its own tests in `tests/test_adapters.py`; those tests are not part of the 15-case matrix.
-- The suite has 144 tests at `bbb0e33`. The 15-case matrix result in the evidence index was recorded on the earlier commit named there. It has not been re-recorded for `bbb0e33`.
-- "Does not provide authenticated multiuser approval" is partly outdated: approver identity is now checked from Git. DDG still does not provide a GitHub PR integration (a GitHub Action is planned) or general decision-to-test translation.
-- Human comparison and rehearsal: still none.
+- The suite has **370 tests, all passing** in the last full run (host and Docker modes). The 15-case matrix was re-run in Docker mode on the final code with a freshly built demo and **matched 15 of 15**. The recorded matrix in the evidence index is from the earlier commit named there and is unchanged.
+- Workers run in a container (network, filesystem writes, memory, CPU, processes and privilege are limited). The static import screen is best-effort. Neither makes the verdict trustworthy against a malicious author: a revision under test can still return fabricated results for its own function. See the [threat model](THREAT_MODEL.md).
+- The matrix uses the adapter `python_job_client_v1`. A second adapter, `python_function_v1`, is covered by `tests/test_adapters.py`, `tests/test_cli_real.py`, `tests/test_tamper.py` and `tests/e2e/`, not by the 15-case matrix.
+- Approver identity is checked from Git (allowlist, touched paths, optional signatures). A GitHub Action exists and is tested offline against real reports; it has not run on GitHub. A pull-request-review binding does not exist.
+- The tamper suite edits every JSON field of the authority files one at a time and checks that none yields a pass. This is the strongest evidence of the gate's fail-closed behaviour, and it covers the same authored scenarios, not an independent corpus.
+- Model drafting was tested with fake providers and scripts. `claude_cli` and `codex_cli` were each run once by hand with a trivial prompt. No API provider and no Bedrock run exists, and no full proposal on a real decision through a CLI agent.
+- Human comparison and rehearsal: still none. The review-time target remains unmeasured.

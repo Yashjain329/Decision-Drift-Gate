@@ -54,7 +54,8 @@ The prior successful live capture and the later timed-out browser request are se
 
 Everything above is the unchanged record of 4 October 2026. Later changes that affect how to read it:
 
-- The 110-test figure belongs to commit `c3feee81c6403361e449ec677accf97a7e27d899`. The suite had 144 tests at commit `bbb0e33` (`Ran 144 tests in 399.768s`, `OK`).
+- The 110-test figure belongs to commit `c3feee81c6403361e449ec677accf97a7e27d899`. The suite has 370 tests on `master` as of 12 October 2026, all passing in the last full run (host and Docker modes).
 - `case-results.json` and `remote-reproduction.json` were produced when workers ran as host subprocesses and approval trusted a typed name. They have not been regenerated with the container sandbox or approver identity checks.
 - The approval identity `Codex integration reviewer` is a typed label. A demo built with current code approves as the Git author `ddg-demo@example.invalid`, listed in the demo's `.ddg/approvers.json`.
 - No human observations have been added. `reviewer-observations.csv` still has headers only.
+- On 12 October 2026 the 15-case matrix was re-run in Docker mode on the final code with a freshly built demo and matched 15 of 15. That output was not added to this folder; `case-results.json` remains the earlier record.

@@ -24,5 +24,4 @@ Total about 5 min; each test is independent except that the scenario tests of on
 a single approved demo repo (`run` never mutates it). Everything lives under temp dirs.
 After a run, `docker ps -a --filter name=ddg-` should print nothing.
 
-Note: the real CLI is demo-only for init/propose/approve, so the function-adapter repo's artifacts
-are built through the Python API and only `python -m ddg run` is a subprocess there.
+Note: the function-adapter repository in these tests builds its artifacts through the Python API and runs only `python -m ddg run` as a subprocess. The real CLI lifecycle on a repository with no demo marker (`init`, `propose`, `validate --calibration-*`, `approve`, `run`) is covered by `tests/test_cli_real.py`.

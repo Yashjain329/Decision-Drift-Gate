@@ -25,7 +25,8 @@ In scope:
 - A head revision that changes the verdict, hides a failure, or reads or writes outside the sandbox.
 - A way to make an unapproved or unverified bundle count as approved (see `ddg/identity.py`, `ddg/engine.py`).
 - A way to bypass the container limits listed in the [threat model](docs/THREAT_MODEL.md), or to make a run silently use the host.
-- Leaks of API keys into reports or child environments.
+- Leaks of API keys, cloud credentials or subscription logins into reports, drafts, error messages or child environments (see the model provider rules in [docs/PROVIDERS.md](docs/PROVIDERS.md)).
+- A model provider or CLI agent step that executes model output, or that sends repository content beyond the decision text and source module it is meant to receive.
 
 Out of scope (documented residual risks in the threat model):
 
