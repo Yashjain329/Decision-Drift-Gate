@@ -90,7 +90,7 @@ export function Rail() {
 
 export function NoticeBar() {
   const { notice } = useDdg();
-  return <div className={`notice notice-${notice?.kind ?? 'success'}`} role="status" aria-live="polite" hidden={!notice}>{notice?.text}</div>;
+  return <div id="notice" className={`notice notice-${notice?.kind ?? 'success'}`} role="status" aria-live="polite" hidden={!notice}>{notice?.text}</div>;
 }
 
 export function View({ id, labelledBy, children }: { id: ViewId; labelledBy: string; children: ReactNode }) {

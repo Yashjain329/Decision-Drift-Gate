@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { View } from '@/components/Shell';
 import { Columns } from '@/components/Chart';
-import { Evidence, Json, PageHead, Tag } from '@/components/ui';
+import { Assertions, Evidence, Json, PageHead, Tag } from '@/components/ui';
 import { FIXTURES, expectedJobs, fixturesMatched, jobsOf, plural, proposalLabel, statusTone } from '@/lib/model';
 import { useDdg } from '@/lib/store';
 import type { Check } from '@/lib/types';
@@ -12,17 +12,6 @@ import type { Check } from '@/lib/types';
 type Source = 'recorded' | 'live';
 
 /** `expect metric == value`, one line per assertion. */
-function Assertions({ check }: { check?: Check | null }) {
-  const list = Array.isArray(check?.assertions) ? check.assertions : [];
-  return (
-    <pre className="code-block code-lg" aria-label="Check assertions">
-      {list.length ? list.map((a, i) => (
-        <span key={i}>{i ? '\n' : ''}<span className="kw">expect </span>{`${a.metric || 'unknown'} == `}<span className="num">{a.equals === undefined ? 'unset' : JSON.stringify(a.equals)}</span></span>
-      )) : '—'}
-    </pre>
-  );
-}
-
 const statusWord = (s?: string): string => (s === 'PASS' ? 'Pass' : s === 'FAIL' ? 'Fail' : s ? 'Error' : '—');
 
 export default function CheckStudio() {
@@ -71,7 +60,7 @@ export default function CheckStudio() {
 
         <article className="panel span-7" aria-labelledby="proposal-title">
           <div className="panel-head"><h2 id="proposal-title">Proposal</h2><code id="check-id" className="muted">{check?.id || 'not recorded'}</code></div>
-          <Assertions check={check} />
+          <Assertions check={check} className="code-block code-lg" label="Check assertions" />
           <dl className="kv">
             <div><dt>Decision</dt><dd id="check-decision">{check ? `${check.decision_id ?? 'not recorded'}${check.supersedes ? ` (supersedes ${check.supersedes})` : ''}` : '—'}</dd></div>
             <div><dt>Scenario</dt><dd id="check-scenario" className="mono">{check?.scenario || '—'}</dd></div>

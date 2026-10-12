@@ -11,7 +11,7 @@ const ALIASES: Record<string, ViewId> = { decision: 'decisions', approval: 'appr
 const HISTORY_KEY = 'ddg-session-runs';
 
 export interface RunRecord { id: string; at: string; label: string; aggregate: string; verdict: string | null; jobs: number | null; expected: number | null }
-export interface Notice { text: string; kind: 'error' | 'success' | 'pending' }
+export interface Notice { text: string; kind: 'error' | 'success' | 'pending' | 'warn' }
 
 interface Store {
   state: DdgState | null;
@@ -107,7 +107,7 @@ export function DdgProvider({ children }: { children: ReactNode }) {
       accept(next);
       if (route === 'run') {
         const m = overall(next.report, next.report_stale === true);
-        setNotice({ text: `Run completed: ${m.word}, exit ${m.exit}.${viewRef.current === 'runs' ? '' : ' See Runs & Regressions.'}`, kind: m.tone === 'fail' ? 'error' : 'success' });
+        setNotice({ text: `Run completed: ${m.word}, exit ${m.exit}.${viewRef.current === 'runs' ? '' : ' See Runs & Regressions.'}`, kind: m.tone === 'fail' ? 'error' : m.tone === 'pass' ? 'success' : 'warn' });
       } else {
         const done: Record<string, string> = { propose: 'Proposal drafted. Validate it next.', validate: 'Calibration finished.', approve: 'Approval recorded. It is verified when the next run reads the approval commit.' };
         setNotice({ text: done[route] ?? 'Done.', kind: 'success' });

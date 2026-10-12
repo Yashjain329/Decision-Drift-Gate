@@ -152,16 +152,18 @@ Earlier versions returned 2 for usage errors. Scripts that treated 2 as "error" 
 
 ## Run the browser demo
 
-The browser interface is a local demo viewer for the synthetic scenario. It binds to this machine only. It draws only what the engine returned: one slab per job actually observed on the target and the candidate, the check's expected count as a dashed marker, and the gate result with its exit code. A missing or errored observation is a hatched "not observed" column, never a zero or a green bar, and the screen states that it does not block anything.
+The browser interface is a local viewer for the synthetic scenario. It binds to this machine only. It has seven pages (Overview, Decisions, Check Studio, Runs & Regressions, Approvals, Reports, Providers & CLI) and draws only what the engine returned: one block per job actually observed on base and head, the check's expected count as a dashed line, and the result with its exit code. A missing or errored observation is a hatched "not observed" column, never a zero or a green bar, and the screen never claims it blocked anything.
 
 ```powershell
 ddg demo-init --destination .ddg-demo
 ddg serve --repo .ddg-demo --state-dir .ddg-state
 ```
 
-Open `http://127.0.0.1:8765`. Choose **Draft a check**, select **Recorded proposal**, draft and validate it, then enter a reviewer and review note to approve the exact check. Run **Retry regression**, **Unseen helper regression**, and **Allowed idempotency exception**. The first two fail; the exception passes. If the demo already exists, start only the server; its saved approval and session resume. Use a new destination for another full lifecycle. Stop the server with Ctrl+C.
+Open `http://127.0.0.1:8765`. In **Check Studio**, select **Recorded proposal**, draft and validate it; in **Approvals**, enter a review label and note to approve the exact check. In **Runs & Regressions**, run **Retry regression**, **Unseen helper regression**, and **Allowed idempotency exception**. The first two fail; the exception passes. If the demo already exists, start only the server; its saved approval and session resume. Use a new destination for another full lifecycle. Stop the server with Ctrl+C.
 
-For the fast pitch, approve beforehand and begin on **Review change**. Disclose that approval was prepared earlier, then click **Run approved check** to execute fresh observations.
+For the fast pitch, approve beforehand and begin on **Overview**. Disclose that approval was prepared earlier, then click **Run approved checks** to execute fresh observations.
+
+The viewer is a Next.js + TypeScript app in `web/`. Its static build in `web/out` is committed, so `ddg serve` and `pip install` need no Node. After changing `web/src`, rebuild with `cd web && npm ci && npm run build` and commit `web/out`.
 
 ## Run the demo from the CLI
 

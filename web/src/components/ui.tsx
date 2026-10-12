@@ -2,9 +2,10 @@
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
 import { outcomeOf, short, type Glyph, type Overall, type Tone } from '@/lib/model';
+import type { Check } from '@/lib/types';
 
-export function Tag({ tone = 'muted', glyph, children, title }: { tone?: Tone; glyph?: Glyph | null; children: ReactNode; title?: string }) {
-  return <span className={`tag tag-${tone}`} title={title}>{glyph ? <Icon name={glyph} /> : null}{children}</span>;
+export function Tag({ tone = 'muted', glyph, children, title, id }: { tone?: Tone; glyph?: Glyph | null; children: ReactNode; title?: string; id?: string }) {
+  return <span className={`tag tag-${tone}`} title={title} id={id}>{glyph ? <Icon name={glyph} /> : null}{children}</span>;
 }
 
 /** Human label first, exact enum as secondary audit metadata. */
@@ -26,9 +27,9 @@ export function Result({ model, id }: { model: Overall; id?: string }) {
   );
 }
 
-export function ExitChip({ model }: { model: Overall }) {
+export function ExitChip({ model, id }: { model: Overall; id?: string }) {
   const tone = model.tone === 'pre' ? 'muted' : model.tone;
-  return <span className={`exit-chip mono tone-${tone}`} title={model.raw || undefined}>exit {model.exit}</span>;
+  return <span className={`exit-chip mono tone-${tone}`} title={model.raw || undefined} id={id}>exit {model.exit}</span>;
 }
 
 /** Full SHA on hover; short SHA on screen. */
@@ -46,8 +47,8 @@ export function Evidence({ title, meta, metaTone, open, children, className = ''
   );
 }
 
-export function Empty({ glyph, children }: { glyph: Glyph; children: ReactNode }) {
-  return <div className="panel empty"><Icon name={glyph} className="ic ic-lg" /><p>{children}</p></div>;
+export function Empty({ glyph, children, id }: { glyph: Glyph; children: ReactNode; id?: string }) {
+  return <div className="panel empty" id={id}><Icon name={glyph} className="ic ic-lg" /><p>{children}</p></div>;
 }
 
 export function PageHead({ crumb, title, lede, aside, id }: { crumb: string; title: string; lede?: ReactNode; aside?: ReactNode; id: string }) {
@@ -63,6 +64,18 @@ export function PageHead({ crumb, title, lede, aside, id }: { crumb: string; tit
   );
 }
 
-export function Json({ value }: { value: unknown }) {
-  return <pre>{value === undefined || value === null ? 'Not recorded' : JSON.stringify(value, null, 2)}</pre>;
+/** Approved-check assertions as `expect metric == value` lines. */
+export function Assertions({ check, className = 'code-block', label }: { check?: Check | null; className?: string; label?: string }) {
+  const list = Array.isArray(check?.assertions) ? check.assertions : [];
+  return (
+    <pre className={className} aria-label={label}>
+      {list.length ? list.map((a, i) => (
+        <span key={i}>{i ? '\n' : ''}<span className="kw">expect </span>{`${a.metric || 'unknown'} == `}<span className="num">{a.equals === undefined ? 'unset' : JSON.stringify(a.equals)}</span></span>
+      )) : '—'}
+    </pre>
+  );
+}
+
+export function Json({ value, id }: { value: unknown; id?: string }) {
+  return <pre id={id}>{value === undefined || value === null ? 'Not recorded' : JSON.stringify(value, null, 2)}</pre>;
 }

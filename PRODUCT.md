@@ -23,7 +23,7 @@ Local-only server bound to 127.0.0.1, started with `ddg serve`, against a genera
 - Real data not available: any time series, drift index, "decision health" percentage, multi-repository or multi-check history, confidence scores. None may be shown as if measured.
 - DDG does not itself block anything. It returns an exit code (0, 1, 2, 3); the CI job or the human acts on it. The interface must not imply that execution was blocked.
 - Missing or unprovable data (INCOMPLETE, NOT_CHECKED, STALE, not run) must never look healthy.
-- The existing element ids used by `web/app.js` and the tests, the `ddg-session-token` meta tag and the `__DDG_SESSION_TOKEN__` placeholder, must keep working.
+- The `ddg-session-token` meta tag (with `__DDG_SESSION_TOKEN__` in `web/src/app/layout.tsx`, replaced by `ddg serve`) and the `#notice` live region must keep working; tests and the browser audit rely on them.
 
 ## Brand Commitments
 Name: Decision Drift Gate. Binding visual direction volunteered by the user on 12 October 2026 ("Obsidian Control Surface"): near-black #090B0E, surface #13171D, control emerald #40E0A0, context blue #5C9DFF, warning amber #FFB454, red for critical violations; Inter or Geist for interface text and Geist Mono for metrics, ids, timestamps and policy traces; calm high-contrast hierarchy; governance and approval states unmistakable; data-driven volumetric visualization, not decorative 3D; slow ambient motion that respects reduced-motion; never color alone.

@@ -34,7 +34,7 @@ export default function Approvals() {
   const who = s.report ? realChecks(s.report)[0]?.approver : undefined;
   const commit = who?.commits?.[0];
   const matched = fixturesMatched(s);
-  const canApprove = !busy && v?.eligible === true && !ap && Boolean(draft?.draft_digest);
+  const canApprove = !busy && v?.eligible === true && !ap && Boolean(draft?.draft_digest) && reviewer.trim() !== '' && reason.trim() !== '';
 
   const [stateWord, stateTone, stateGlyph]: [string, Tone, Glyph | null] = who?.verified ? ['Verified', 'pass', 'check']
     : who ? ['Unverifiable', 'fail', 'x']

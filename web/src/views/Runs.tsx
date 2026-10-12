@@ -1,10 +1,10 @@
 'use client';
 // Port of legacy/index.html section "runs" + renderScenarioSelect(), trace(), renderRuns(), renderDetail() in legacy/app.js.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Columns } from '@/components/Chart';
 import { Icon } from '@/components/Icon';
 import { View } from '@/components/Shell';
-import { Empty, EnumLine, Evidence, ExitChip, OutcomeTag, PageHead, Result, Sha } from '@/components/ui';
+import { Assertions, Empty, EnumLine, Evidence, ExitChip, OutcomeTag, PageHead, Result, Sha } from '@/components/ui';
 import {
   expectedJobs, headLabel, jobsOf, obsText, OUTCOMES, outcomeOf, overall, plural, realChecks, scenarioId, SIGNATURE,
   statusTone, VERDICT_TEXT, type Tone,
@@ -33,18 +33,6 @@ function Trace({ obs }: { obs?: Observation }) {
         return <li key={i} className={cls || undefined}>{text}</li>;
       })}
     </ol>
-  );
-}
-
-function Assertions({ check }: { check?: Check }) {
-  const list = Array.isArray(check?.assertions) ? check.assertions : [];
-  if (!list.length) return <pre className="code-block">—</pre>;
-  return (
-    <pre className="code-block">
-      {list.map((a, i) => (
-        <span key={i}>{i ? '\n' : ''}<span className="kw">expect </span>{`${a.metric || 'unknown'} == `}<span className="num">{a.equals === undefined ? 'unset' : JSON.stringify(a.equals)}</span></span>
-      ))}
-    </pre>
   );
 }
 
@@ -139,6 +127,7 @@ export default function Runs() {
   const scenarios = Array.isArray(s.scenarios) ? s.scenarios : [];
   const [picked, setPicked] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  useEffect(() => { setSelected(null); }, [report?.run_at]); // a new run starts from its most important check
 
   // keep the user's pick while it still exists; otherwise follow the scenario of the latest run
   const scenario = scenarios.some((x) => x.id === picked) ? picked : scenarioId(report, scenarios) ?? scenarios[0]?.id ?? '';

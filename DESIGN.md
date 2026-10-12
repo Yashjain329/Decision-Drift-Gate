@@ -1,6 +1,6 @@
 # Design system: Obsidian / Signal Lime
 
-Recorded on 12 October 2026 from the built viewer (`web/index.html`, `web/style.css`, `web/app.js`). Product truth is in [PRODUCT.md](PRODUCT.md); the creative brief is `../ddg-reference/creative-direction.txt`. This file describes what exists.
+Recorded on 12 October 2026 from the built viewer: a Next.js + TypeScript app in `web/src` (views in `web/src/views`, shared primitives in `web/src/components`, product vocabulary and derivations in `web/src/lib/model.ts`, styles in `web/src/app/globals.css`), statically exported to `web/out`. Product truth is in [PRODUCT.md](PRODUCT.md); the creative brief is `../ddg-reference/creative-direction.txt`. This file describes what exists.
 
 Formula: reference architecture + Signal Lime visual system + complete evidence + progressive disclosure + signal-first readability.
 

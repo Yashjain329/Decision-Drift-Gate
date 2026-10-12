@@ -152,6 +152,7 @@ textarea { resize: vertical; }
 .notice-error { border-color: rgba(255, 107, 107, .5); color: #FFC9C9; }
 .notice-success { border-color: rgba(215, 255, 103, .4); }
 .notice-pending { border-color: rgba(155, 138, 251, .5); }
+.notice-warn { border-color: rgba(245, 163, 107, .55); color: #FFD7BC; }
 
 /* ---------- result word ---------- */
 .result { display: inline-flex; align-items: center; gap: 12px; }
@@ -305,6 +306,9 @@ textarea { resize: vertical; }
 .result-row .rr-dec { color: var(--muted); font-size: 12px; }
 .result-row .rr-obs { grid-column: 1 / -1; color: var(--ink-2); font-family: var(--mono); font-size: 12px; }
 .warnings { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.warning { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; margin-top: 8px; color: var(--ink-2); font-size: 13px; }
+.warning .ic { width: 16px; height: 16px; margin-top: 2px; color: var(--orange); }
+.warning code { color: var(--orange); }
 .detail { display: flex; flex-direction: column; }
 .detail-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 .detail-block .field-label { margin-top: 0; }
