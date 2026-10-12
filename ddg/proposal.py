@@ -247,7 +247,7 @@ def _prompt(context: dict, repair: str | None = None) -> str:
         "Cite exact substrings from the decision rule or exceptions. If the decision cannot be expressed with this "
         "fixed vocabulary, return UNSUPPORTED_DECISION and a concise reason. Do not propose code, commands, paths, "
         "or arbitrary expressions.\nEVIDENCE_JSON:\n" +
-        json.dumps(evidence, sort_keys=True, ensure_ascii=False, separators=(",", ":")) +
+        json.dumps(evidence, sort_keys=True, ensure_ascii=True, separators=(",", ":")) +
         ("\nREPAIR: " + repair if repair else "")
     )
 
