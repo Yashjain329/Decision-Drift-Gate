@@ -1,0 +1,4 @@
+:HL["/_next/static/chunks/0-7hlgaldropk.css","style"]
+:HL["/fonts/Geist-Variable.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+1:[["children",{"s":"__PAGE__","h":160}]]
+0:{"b":"aI4TEHfblMgNcxRSkhLcO","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

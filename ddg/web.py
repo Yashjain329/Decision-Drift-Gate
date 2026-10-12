@@ -18,6 +18,34 @@ from .proposal import load_context, propose
 from .report import is_stale
 
 _MAX_BODY = 64 * 1024
+
+# The browser viewer is a Next.js static export in web/out. Only these file types are served, only from inside
+# that directory, and never dot-files; HTML gets the per-session token injected.
+_STATIC_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".woff2": "font/woff2",
+    ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
+}
+
+
+def _static_asset(web_dir: Path, url_path: str) -> tuple[Path, str] | None:
+    rel = "index.html" if url_path in ("", "/") else url_path.lstrip("/")
+    parts = rel.split("/")
+    if any(not p or p.startswith(".") or "\\" in p or ":" in p for p in parts):
+        return None
+    candidate = (web_dir / rel).resolve()
+    try:
+        candidate.relative_to(web_dir)
+    except ValueError:
+        return None
+    content_type = _STATIC_TYPES.get(candidate.suffix.lower())
+    if content_type is None or not candidate.is_file():
+        return None
+    return candidate, content_type
 _SCENARIOS = {
     "regression": ("approved-base", "regression", "Retry regression"),
     "unseen_regression": ("approved-base", "unseen-regression", "Unseen helper regression"),
@@ -203,7 +231,8 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
         raise ValueError("Generated-demo marker does not match repository")
     state_dir.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
-    web_dir = Path(__file__).resolve().parents[1] / "web"
+    project_root = Path(__file__).resolve().parents[1]
+    web_dir = (project_root / "web" / "out").resolve()
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "DecisionDriftGate/1"
@@ -302,21 +331,16 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                     state["report_stale"] = is_stale(repo, state["report"], base_ref, head_ref)
                 self._json(200, {"state": state})
                 return
-            assets = {"/": ("index.html", "text/html; charset=utf-8"),
-                      "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                      "/style.css": ("style.css", "text/css; charset=utf-8"),
-                      "/fonts/Geist-Variable.woff2": ("fonts/Geist-Variable.woff2", "font/woff2"),
-                      "/fonts/GeistMono-Variable.woff2": ("fonts/GeistMono-Variable.woff2", "font/woff2")}
-            asset = assets.get(path)
+            asset = _static_asset(web_dir, path)
             if asset is None:
                 self._json(404, {"error": "Not found"})
                 return
             try:
-                content = (web_dir / asset[0]).read_bytes()
+                content = asset[0].read_bytes()
             except OSError:
                 self._json(404, {"error": "Browser asset is unavailable"})
                 return
-            if path == "/":
+            if asset[1].startswith("text/html"):
                 content = content.replace(b"__DDG_SESSION_TOKEN__", html.escape(token, quote=True).encode("ascii"))
             self._send(200, content, asset[1])
 
@@ -401,9 +425,9 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                     raise _RequestError(400, "Proposal mode must be recorded or live")
                 revision = refs.get("decision_change")
                 context = load_context(repo, revision=revision)
-                context["env_file"] = web_dir.parent / ".env"
+                context["env_file"] = project_root / ".env"
                 if mode == "recorded":
-                    capture_path = web_dir.parent / "evidence" / "gemini-proposal.json"
+                    capture_path = project_root / "evidence" / "gemini-proposal.json"
                     context["capture"] = _json_read(capture_path)
                 draft = propose(context, mode=mode)
                 state.update({"mode": mode, "lifecycle": "proposed", "old_decision": context["old_decision"],

@@ -276,5 +276,31 @@ class WebServerTests(unittest.TestCase):
         self.assertEqual(state["lifecycle"], "approved")
 
 
+class StaticAssetTests(unittest.TestCase):
+    """The viewer is a static export; serving must stay confined to web/out and to known file types."""
+
+    def setUp(self):
+        from ddg.web import _static_asset
+        self.lookup = _static_asset
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name, "out").resolve()
+        (self.root / "_next" / "static").mkdir(parents=True)
+        (self.root / "index.html").write_text("<meta name=\"ddg-session-token\" content=\"__DDG_SESSION_TOKEN__\">")
+        (self.root / "_next" / "static" / "a.js").write_text("x")
+        (self.root / ".hidden.js").write_text("x")
+        (self.root / "notes.py").write_text("x")
+        Path(self.tmp.name, "secret.txt").write_text("x")
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_serves_index_and_chunks_with_types(self):
+        self.assertEqual(self.lookup(self.root, "/")[1], "text/html; charset=utf-8")
+        self.assertEqual(self.lookup(self.root, "/_next/static/a.js")[1], "text/javascript; charset=utf-8")
+
+    def test_rejects_traversal_dotfiles_unknown_types_and_missing(self):
+        for path in ("/../secret.txt", "/_next/../../secret.txt", "/.hidden.js", "/notes.py", "/missing.js",
+                     "/_next\static\a.js", "/C:/x.js", "/_next/static/"):
+            self.assertIsNone(self.lookup(self.root, path), path)
+
+
 if __name__ == "__main__":
     unittest.main()

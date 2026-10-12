@@ -25,5 +25,5 @@ packages = ["ddg", "ddg.adapters", "ddg.providers", "web", "evidence"]
 version = { attr = "ddg.__version__" }
 
 [tool.setuptools.package-data]
-web = ["*.html", "*.js", "*.css", "fonts/*"]
+web = ["out/**/*"]  # Next.js static export; build with `npm run build` in web/
 evidence = ["gemini-proposal.json"]
