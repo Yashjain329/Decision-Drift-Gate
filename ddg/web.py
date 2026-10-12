@@ -304,7 +304,9 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                 return
             assets = {"/": ("index.html", "text/html; charset=utf-8"),
                       "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-                      "/style.css": ("style.css", "text/css; charset=utf-8")}
+                      "/style.css": ("style.css", "text/css; charset=utf-8"),
+                      "/fonts/Geist-Variable.woff2": ("fonts/Geist-Variable.woff2", "font/woff2"),
+                      "/fonts/GeistMono-Variable.woff2": ("fonts/GeistMono-Variable.woff2", "font/woff2")}
             asset = assets.get(path)
             if asset is None:
                 self._json(404, {"error": "Not found"})

@@ -4,7 +4,7 @@ Turn changed engineering decisions into developer-approved checks that catch old
 
 **Status (12 October 2026, `master`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The test suite has **370 tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has been tested offline only; it has not run on GitHub.
 
-![Actual browser execution: ordinary tests pass while an approved check observes duplicate jobs](evidence/browser-regression.jpg)
+![The review screen after a regression: FAILED, exit code 1. One slab of jobs for the target, two for the candidate, against the check's expected 1](evidence/ui-obsidian-review-failed.png)
 
 ## What it does
 
@@ -152,7 +152,7 @@ Earlier versions returned 2 for usage errors. Scripts that treated 2 as "error" 
 
 ## Run the browser demo
 
-The browser interface is a local demo viewer for the synthetic scenario. It binds to this machine only.
+The browser interface is a local demo viewer for the synthetic scenario. It binds to this machine only. It draws only what the engine returned: one slab per job actually observed on the target and the candidate, the check's expected count as a dashed marker, and the gate result with its exit code. A missing or errored observation is a hatched "not observed" column, never a zero or a green bar, and the screen states that it does not block anything.
 
 ```powershell
 ddg demo-init --destination .ddg-demo

@@ -59,3 +59,13 @@ Everything above is the unchanged record of 4 October 2026. Later changes that a
 - The approval identity `Codex integration reviewer` is a typed label. A demo built with current code approves as the Git author `ddg-demo@example.invalid`, listed in the demo's `.ddg/approvers.json`.
 - No human observations have been added. `reviewer-observations.csv` still has headers only.
 - On 12 October 2026 the 15-case matrix was re-run in Docker mode on the final code with a freshly built demo and matched 15 of 15. That output was not added to this folder; `case-results.json` remains the earlier record.
+
+## Addendum 12 October 2026: redesigned viewer
+
+The `ui-obsidian-*.png` images were captured on 12 October 2026 from the redesigned viewer (Playwright and Chromium, a freshly built approved demo, real runs in Docker mode). They show the same product states as the earlier `browser-*.jpg` images, which remain the unchanged 4 October record of the light interface:
+
+- [Review, FAILED](ui-obsidian-review-failed.png): regression, one target job and two candidate jobs against an expected one.
+- [Review, PASSED](ui-obsidian-review-passed.png): the corrected implementation.
+- [Review, INCOMPLETE](ui-obsidian-review-incomplete.png): a crashing candidate; its observation is shown as not observed.
+- [Review on a 390 px screen](ui-obsidian-review-mobile.png): policy edit at the head, INCOMPLETE.
+- [Approval](ui-obsidian-approval.png) and [decision change](ui-obsidian-decision.png) views.

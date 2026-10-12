@@ -24,6 +24,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Changed
 
+- **Browser viewer redesign** (`web/`): a dark "Obsidian control surface" with Geist and Geist Mono (bundled, SIL Open Font License, served locally). The review screen shows the gate result and exit code, a state field with one slab per observed job for the target and the candidate against the check's expected count, and Detect / Explain / Enforce / Audit built from the report. Missing observations render as hatched "not observed", state is always paired with a label and glyph, motion respects `prefers-reduced-motion`, and the layout works at 390 px. Opening view follows the URL hash (`#decision`, `#approval`, `#review`). All element ids and the session-token meta tag are unchanged. Checked with Playwright (Chromium) against a live demo in four verdict states and a mobile layout; see the `ui-obsidian-*.png` images in `evidence/`.
 - Approval no longer relies on the typed reviewer name. The Git author of the approval commit is what DDG checks.
 - Reports show the isolation mode and the verified approver evidence. `ordinary_tests` is empty for runs that use only the function adapter.
 - Usage and I/O errors exit with 3 instead of 2, so 2 now means only INCOMPLETE.
