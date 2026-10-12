@@ -54,16 +54,16 @@ def _sandbox(report: dict) -> str:
     return value if isinstance(value, str) and value else "unknown"
 
 
-def _approver(approval) -> str:
-    if not isinstance(approval, dict):
+def _approver(item) -> str:
+    """Summarise ddg.identity evidence: {"verified": bool, "reason"|"commits": [...]}."""
+    evidence = item.get("approver")
+    if not isinstance(evidence, dict):
         return "Not recorded"
-    for key in ("verified_approver", "approver", "reviewer"):
-        value = approval.get(key)
-        if isinstance(value, dict):
-            value = value.get("name") or value.get("email") or value.get("identity")
-        if value:
-            return str(value)
-    return "Not recorded"
+    if evidence.get("verified") is not True:
+        return f"UNVERIFIED ({evidence.get('reason') or 'no reason recorded'})"
+    commits = [c for c in evidence.get("commits") or [] if isinstance(c, dict)]
+    who = sorted({str(c.get("signer") or c.get("author_email") or "?") for c in commits})
+    return "verified: " + ", ".join(who) if who else "verified"
 
 
 def render(report) -> str:
@@ -90,7 +90,7 @@ def render(report) -> str:
             decision = item.get("decision")
             decision_id = decision.get("id") if isinstance(decision, dict) else item.get("decision_id")
             lines.append(f"| {code(item.get('check_id'))} | {code(item.get('verdict'), 40)} | "
-                         f"{code(decision_id)} | {esc(_approver(item.get('approval')), 80)} |")
+                         f"{code(decision_id)} | {esc(_approver(item), 120)} |")
         lines.append("")
     else:
         lines += ["No approved checks were evaluated.", ""]

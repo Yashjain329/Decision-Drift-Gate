@@ -51,6 +51,23 @@ class ActionTests(unittest.TestCase):
         self.assertIn("UNSAFE", pr_comment.render(self._synthetic("PASSED_CHECKS", sandbox="host")))
         self.assertIn("UNSAFE", pr_comment.render(self._synthetic("PASSED_CHECKS", sandbox={"mode": "host"})))
 
+    def test_real_report_records_sandbox_and_approver(self):
+        report = next(iter(self.real.values()))
+        self.assertIn(report["sandbox"], ("host", "docker", "podman"))
+        self.assertEqual("UNSAFE" in pr_comment.render(report), report["sandbox"] == "host")
+        self.assertIn("UNVERIFIED" if not report["checks"][0]["approver"].get("verified") else "verified",
+                      pr_comment.render(report))
+
+    def test_approver_evidence_rendering(self):
+        report = self._synthetic("PASSED_CHECKS", sandbox="docker")
+        report["checks"] = [dict(report["checks"][0], approver={"verified": True, "commits": [
+            {"commit": "a" * 40, "author_email": "dev@example.com", "signature": "G", "signer": "dev@example.com"}]})]
+        self.assertIn("verified: dev&#64;example.com", pr_comment.render(report))
+        report["checks"] = [dict(report["checks"][0], approver={"verified": False, "reason": "bad <b>sig</b>"})]
+        text = pr_comment.render(report)
+        self.assertIn("UNVERIFIED", text)
+        self.assertNotIn("<b>", text.split("<details>")[0])
+
     def test_malformed_report_is_neutral(self):
         for bad in (None, [], {}, {"aggregate": "PASSED"}):
             self.assertEqual(pr_comment.conclusion(bad), "neutral")
