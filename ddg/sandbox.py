@@ -8,13 +8,17 @@ from __future__ import annotations
 
 import functools
 import os
+import re
 import shutil
 import subprocess
 import sys
 import uuid
 from pathlib import Path
 
-IMAGE = os.environ.get("DDG_SANDBOX_IMAGE", "python:3.12-slim")
+DEFAULT_IMAGE = "python:3.12-slim"
+IMAGE = DEFAULT_IMAGE  # kept for compatibility; use image() so DDG_SANDBOX_IMAGE is honoured
+_IMAGE_REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:@-]*")
+_DIGEST = re.compile(r"@sha256:[0-9a-f]{64}$")
 MEMORY = "128m"
 CPUS = "0.5"
 PIDS = "64"
@@ -23,6 +27,36 @@ SCRATCH = "16m"
 
 class SandboxUnavailable(RuntimeError):
     pass
+
+
+def image() -> str:
+    """The sandbox image. DDG_SANDBOX_IMAGE must be a plain reference; unless it is pinned by
+    @sha256 digest it also needs DDG_SANDBOX_ALLOW_UNPINNED=1 (a labelled dev override)."""
+    ref = os.environ.get("DDG_SANDBOX_IMAGE", "").strip()
+    if not ref:
+        return DEFAULT_IMAGE
+    if not _IMAGE_REF.fullmatch(ref):  # also blocks option injection such as "--privileged"
+        raise SandboxUnavailable(f"DDG_SANDBOX_IMAGE is not a valid image reference: {ref[:80]!r}")
+    if not _DIGEST.search(ref) and os.environ.get("DDG_SANDBOX_ALLOW_UNPINNED") != "1":
+        raise SandboxUnavailable(
+            f"DDG_SANDBOX_IMAGE {ref} is not digest-pinned (name@sha256:...); "
+            "set DDG_SANDBOX_ALLOW_UNPINNED=1 to accept it as a dev override")
+    return ref
+
+
+def describe() -> dict:
+    """Report-ready summary: mode, image and whether the image is digest-pinned. Never raises."""
+    try:
+        mode = resolve()
+        ref = None if mode == "host" else image()
+    except SandboxUnavailable as exc:
+        return {"mode": "unavailable", "image": None, "pinned": False, "note": str(exc)}
+    if mode == "host":
+        return {"mode": "host", "image": None, "pinned": False, "note": "UNSAFE: target runs on the host, not in a container"}
+    pinned = bool(_DIGEST.search(ref))
+    note = "image is digest-pinned" if pinned else (
+        "image is NOT digest-pinned (" + ("default tag" if ref == DEFAULT_IMAGE else "dev override") + ")")
+    return {"mode": mode, "image": ref, "pinned": pinned, "note": note}
 
 
 def requested() -> str:
@@ -50,8 +84,10 @@ def resolve() -> str:
     for runtime in ([choice] if choice != "auto" else ["docker", "podman"]):
         if _usable(runtime):
             return runtime
+    wanted = choice if choice != "auto" else "docker or podman"
     raise SandboxUnavailable(
-        "No usable container runtime; start Docker/Podman or set DDG_SANDBOX=host to run unsafely")
+        f"No usable container runtime ({wanted} is missing or its daemon is not running); "
+        "start it or set DDG_SANDBOX=host to run unsafely")
 
 
 def container_argv(runtime: str, name: str, source_dir: Path, worker: Path,
@@ -66,7 +102,7 @@ def container_argv(runtime: str, name: str, source_dir: Path, worker: Path,
         "--tmpfs", f"/tmp:rw,noexec,nosuid,size={SCRATCH}",
         "--env", "PYTHONDONTWRITEBYTECODE=1", "--env", "PYTHONIOENCODING=utf-8",
         "-v", f"{source_dir}:/work/src:ro", "-v", f"{worker}:/work/worker.py:ro",
-        IMAGE, "python", "/work/worker.py", f"/work/src/{module_name}",
+        image(), "python", "/work/worker.py", f"/work/src/{module_name}",
     ]
 
 
@@ -82,18 +118,22 @@ def force_remove(runtime: str, name: str) -> None:
         pass
 
 
-@functools.lru_cache(maxsize=None)
 def ensure_image(runtime: str) -> None:
-    """Pull the pinned image once, outside any per-run timeout."""
+    """Pull the image once per (runtime, image), outside any per-run timeout."""
+    _ensure_image(runtime, image())
+
+
+@functools.lru_cache(maxsize=None)
+def _ensure_image(runtime: str, ref: str) -> None:  # failures raise, so they are never cached
     try:
-        if subprocess.run([runtime, "image", "inspect", IMAGE], capture_output=True,
+        if subprocess.run([runtime, "image", "inspect", ref], capture_output=True,
                           timeout=30, check=False).returncode == 0:
             return
-        pulled = subprocess.run([runtime, "pull", IMAGE], capture_output=True, timeout=600, check=False)
+        pulled = subprocess.run([runtime, "pull", ref], capture_output=True, timeout=600, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise SandboxUnavailable(f"Could not prepare sandbox image {IMAGE}") from exc
+        raise SandboxUnavailable(f"Could not prepare sandbox image {ref}") from exc
     if pulled.returncode:
-        raise SandboxUnavailable(f"Could not pull sandbox image {IMAGE}")
+        raise SandboxUnavailable(f"Could not pull sandbox image {ref}")
 
 
 def small_environment() -> dict[str, str]:

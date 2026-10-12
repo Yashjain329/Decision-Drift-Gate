@@ -98,6 +98,7 @@ def _error_observation(message: str, events: list[dict[str, Any]] | None = None)
 
 
 _MAX_LINE = 1 << 20
+_MAX_MESSAGES = 1000  # a flood of valid calls must not grow the parent's event log until the timeout
 
 
 def _drive_worker(proc: subprocess.Popen, service: FakeService) -> dict:
@@ -106,7 +107,9 @@ def _drive_worker(proc: subprocess.Popen, service: FakeService) -> dict:
         return {"op": "error", "error": message}
 
     try:
-        for line in iter(lambda: proc.stdout.readline(_MAX_LINE + 1), ""):
+        for count, line in enumerate(iter(lambda: proc.stdout.readline(_MAX_LINE + 1), "")):
+            if count >= _MAX_MESSAGES:
+                return fail("Worker sent too many messages")
             if len(line) > _MAX_LINE:
                 return fail("Worker message exceeded the size limit")
             try:
@@ -232,11 +235,13 @@ def _execute(repo: Path, sha: str, scenario: str, timeout: float) -> dict:
         except (OSError, ValueError) as exc:
             return _error_observation(f"Worker could not run: {type(exc).__name__}")
         result: dict = {}
-        driver = threading.Thread(target=lambda: result.update(_drive_worker(proc, service)), daemon=True)
-        driver.start()
-        driver.join(float(timeout))
-        timed_out = driver.is_alive()
-        sandbox.reap(proc, runtime, container_name)
+        try:
+            driver = threading.Thread(target=lambda: result.update(_drive_worker(proc, service)), daemon=True)
+            driver.start()
+            driver.join(float(timeout))
+            timed_out = driver.is_alive()
+        finally:  # also on KeyboardInterrupt or a failed thread start: never leak the container
+            sandbox.reap(proc, runtime, container_name)
         driver.join(2)
         if timed_out:
             return _error_observation("Target execution timed out")
