@@ -186,7 +186,11 @@ def _parser() -> argparse.ArgumentParser:
     proposal.add_argument("--mode", choices=("live", "recorded", "manual"), default="live")
     proposal.add_argument("--capture", type=Path, default=DEFAULT_CAPTURE)
     proposal.add_argument("--check", type=Path, help="explicit JSON body required for manual mode")
+    proposal.add_argument("--provider", help="live mode: model provider (see `ddg providers`); default DDG_PROVIDER or gemini_api")
+    proposal.add_argument("--model", help="live mode: model name or id for the provider (default DDG_MODEL)")
     proposal.add_argument("--out", required=True, type=Path)
+
+    commands.add_parser("providers", help="list the model providers available for live proposals")
 
     validate = commands.add_parser("validate", help="calibrate a draft against known bad, good, and exception cases")
     validate.add_argument("--repo", required=True, type=Path)
@@ -233,6 +237,12 @@ def _execute(args: argparse.Namespace) -> int:
         print(_json_output(result))
         return 0
 
+    if args.command == "providers":
+        from . import providers
+        print(_json_output({"providers": providers.names(), "default": providers.DEFAULT_PROVIDER,
+                            "select": "DDG_PROVIDER or --provider; model via DDG_MODEL or --model"}))
+        return 0
+
     repo = Path(args.repo).expanduser().resolve()
     if args.command == "init":
         print(_json_output(_init_repo(repo, args.approver)))
@@ -254,6 +264,10 @@ def _execute(args: argparse.Namespace) -> int:
             if args.check is None:
                 raise ValueError("Manual mode requires --check with an explicit JSON check body")
             context["manual_check"] = _read_boundary(str(args.check))
+        if args.provider:
+            context["provider"] = args.provider
+        if args.model:
+            context["model"] = args.model
         draft = propose(context, mode=args.mode)
         _write_json(draft, output)
         print(_json_output({"draft_digest": draft["draft_digest"], "proposal_mode": draft["proposal_mode"],

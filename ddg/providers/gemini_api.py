@@ -41,7 +41,9 @@ class GeminiApi(Provider):
 
 
 def _factory(env, model):
-    chosen = model or (env.get("DDG_GEMINI_MODEL") or "").strip() or require_env(env, "DDG_MODEL", "gemini_api")
+    chosen = model or (env.get("DDG_GEMINI_MODEL") or "").strip()
+    if not chosen:
+        raise ProviderError("provider_config", "DDG_GEMINI_MODEL (or DDG_MODEL) is required for the gemini_api provider")
     return GeminiApi(chosen, require_env(env, "GEMINI_API_KEY", "gemini_api"))
 
 

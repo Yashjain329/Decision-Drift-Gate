@@ -34,6 +34,13 @@ class RegistryTests(unittest.TestCase):
         env = {"DDG_PROVIDER": "Anthropic-API", "ANTHROPIC_API_KEY": SECRET, "DDG_MODEL": "m"}
         self.assertEqual(providers.create(env=env).name, "anthropic_api")
 
+    def test_all_providers_load_even_when_one_registered_first(self):
+        # Regression: importing ddg.proposal registers gemini_api before names() runs.
+        import subprocess
+        code = "import ddg.proposal; from ddg import providers; print(len(providers.names()))"
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+        self.assertEqual(out.stdout.strip(), "7")
+
     def test_unknown_provider_is_a_config_error(self):
         with self.assertRaises(ProviderError) as ctx:
             providers.create("nope", env={})
@@ -301,3 +308,109 @@ class CustomCliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---- full lifecycle with a non-Gemini live provider --------------------------------------------
+class LifecycleWithProviderTests(unittest.TestCase):
+    CHECK = json.loads(Path("examples/manual_check.json").read_text(encoding="utf-8"))
+
+    def answer(self):
+        return json.dumps({"status": "DRAFT", "check": self.CHECK, "reason": "fake model"})
+
+    def lifecycle(self, provider, env=None):
+        from ddg.approval import approve, validate_draft
+        from ddg.demo import build_demo
+        from ddg.engine import compare
+        from ddg.proposal import load_context, propose
+        with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, env or {}):
+            demo = build_demo(Path(folder) / "repo")
+            repo, refs = Path(demo["repo"]), demo["refs"]
+            context = load_context(repo, revision=refs["decision_change"])
+            draft = propose(context, "live", provider=provider)
+            validation = validate_draft(repo, draft, refs)
+            self.assertTrue(validation["eligible"])
+            approved = approve(repo, draft, validation, "Dev", "Reviewed", commit_demo=True)
+            report = compare(repo, approved["refs"]["approved_base"], approved["refs"]["regression"])
+            return draft, report
+
+    def test_fake_provider_draft_passes_calibration_approval_and_review(self):
+        class Fake(providers.Provider):
+            name = "bedrock"
+            default_timeout = 90
+
+            def client_version(self):
+                return "boto3 9.9"
+
+            def complete(inner, prompt, schema, timeout):
+                self.assertIn("EVIDENCE_JSON", prompt)
+                self.assertEqual(timeout, 90)
+                return self.answer()
+
+        draft, report = self.lifecycle(Fake("us.model-v1:0"))
+        meta = draft["request_metadata"]
+        self.assertEqual((meta["provider"], meta["timeout_seconds"], draft["model"], draft["sdk_version"]),
+                         ("bedrock", 90, "us.model-v1:0", "boto3 9.9"))
+        self.assertEqual(report["aggregate"], "FAILED")
+
+    def test_real_subprocess_cli_provider_end_to_end(self):
+        path = script("import sys, json\nsys.stdin.read()\nprint(json.dumps(%r))" % json.loads(self.answer()))
+        try:
+            env = {"DDG_PROVIDER": "custom_cli", "DDG_CLI_COMMAND": json.dumps([sys.executable, str(path)]),
+                   "DDG_PROVIDER_TIMEOUT": "120"}
+            from ddg.proposal import load_context, propose  # noqa: F401
+            provider = providers.create(env={**os.environ, **env})
+            draft, report = self.lifecycle(provider, env)
+            self.assertEqual(draft["request_metadata"]["provider"], "custom_cli")
+            self.assertEqual(draft["request_metadata"]["timeout_seconds"], 120)  # DDG_PROVIDER_TIMEOUT applied
+        finally:
+            path.unlink(missing_ok=True)
+
+    def test_timeout_env_is_recorded_and_bounded(self):
+        class Fake(providers.Provider):
+            name = "openai_api"
+
+            def client_version(self):
+                return "chat-completions"
+
+            def complete(inner, prompt, schema, timeout):
+                self.assertEqual(timeout, 200)
+                return self.answer()
+
+        draft, _ = self.lifecycle(Fake("m"), {"DDG_PROVIDER_TIMEOUT": "200"})
+        self.assertEqual(draft["request_metadata"]["timeout_seconds"], 200)
+
+    def test_provider_failure_is_a_clean_error(self):
+        from ddg.demo import build_demo
+        from ddg.proposal import load_context, propose
+
+        class Down(providers.Provider):
+            name = "bedrock"
+
+            def complete(inner, prompt, schema, timeout):
+                raise ProviderError("provider_auth_failed", "Provider rejected the credentials (HTTP 403)")
+
+        with tempfile.TemporaryDirectory() as folder:
+            demo = build_demo(Path(folder) / "repo")
+            context = load_context(Path(demo["repo"]), revision=demo["refs"]["decision_change"])
+            with self.assertRaisesRegex(ValueError, "provider_auth_failed"):
+                propose(context, "live", provider=Down("m"))
+
+    def test_garbage_answer_gets_one_repair_then_fails(self):
+        from ddg.demo import build_demo
+        from ddg.proposal import load_context, propose
+        calls = []
+
+        class Bad(providers.Provider):
+            name = "openai_api"
+
+            def complete(inner, prompt, schema, timeout):
+                calls.append(prompt)
+                return "I cannot help with that."
+
+        with tempfile.TemporaryDirectory() as folder:
+            demo = build_demo(Path(folder) / "repo")
+            context = load_context(Path(demo["repo"]), revision=demo["refs"]["decision_change"])
+            with self.assertRaises(ValueError):
+                propose(context, "live", provider=Bad("m"))
+        self.assertEqual(len(calls), 2)
+        self.assertIn("REPAIR", calls[1])

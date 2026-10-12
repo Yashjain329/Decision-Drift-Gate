@@ -86,9 +86,14 @@ def create(name: str | None = None, model: str | None = None,
     return factory(env, chosen_model)
 
 
+_loaded = False
+
+
 def _load_builtin() -> None:
-    if _FACTORIES:
+    global _loaded
+    if _loaded:
         return
+    _loaded = True  # set first: the imports below call register() but must not re-enter here
     from . import anthropic_api, bedrock, cli, gemini_api, openai_api  # noqa: F401 (they register)
 
 

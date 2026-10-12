@@ -11,6 +11,7 @@ dependencies = []
 
 [project.optional-dependencies]
 ai = ["google-genai==2.28.0"]
+bedrock = ["boto3>=1.35"]
 
 [project.scripts]
 ddg = "ddg:console_main"
@@ -18,7 +19,7 @@ ddg = "ddg:console_main"
 [tool.setuptools]
 # web/ and evidence/ are installed beside ddg/ because ddg/web.py and ddg/cli.py
 # resolve them as <parent of ddg>/web and <parent of ddg>/evidence.
-packages = ["ddg", "web", "evidence"]
+packages = ["ddg", "ddg.adapters", "ddg.providers", "web", "evidence"]
 
 [tool.setuptools.dynamic]
 version = { attr = "ddg.__version__" }

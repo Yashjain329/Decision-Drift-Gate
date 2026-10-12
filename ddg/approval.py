@@ -71,12 +71,16 @@ def _provenance_valid(draft: dict) -> bool:
             or not isinstance(request, dict) or not isinstance(response, dict)):
         return False
     required_request = {"model", "prompt_version", "input_digest", "request_count", "response_format", "timeout_seconds"}
-    if (set(request) != required_request or request["model"] != draft["model"]
+    provider_name = request.get("provider")
+    if (provider_name is not None and (not isinstance(provider_name, str)
+                                       or not re.fullmatch(r"[a-z][a-z0-9_]{1,39}", provider_name))):
+        return False
+    if (set(request) - {"provider"} != required_request or request["model"] != draft["model"]
             or request["input_digest"] != draft["input_digest"]
             or not isinstance(request["prompt_version"], str) or not request["prompt_version"].strip()
             or isinstance(request["request_count"], bool) or request["request_count"] not in (1, 2)
             or request["response_format"] != "application/json"
-            or isinstance(request["timeout_seconds"], bool) or request["timeout_seconds"] != 30
+            or type(request["timeout_seconds"]) is not int or not 1 <= request["timeout_seconds"] <= 600
             or set(response) != {"status", "reason"} or response["status"] != "DRAFT"
             or not isinstance(response["reason"], str)):
         return False
