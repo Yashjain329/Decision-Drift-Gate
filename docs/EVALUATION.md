@@ -27,3 +27,13 @@ The original 50% review-time reduction remains an unmeasured target. Approval la
 Implementation and browser checks ran on Windows with Python 3.12.4 and Git 2.51.0.windows.2. Live capture used optional `google-genai==2.28.0` and `gemini-3.8-flash`. The core, tests, Recorded generation and approved execution use Python's standard library and Git; no key or network is needed for them.
 
 The local application does not provide a GitHub PR integration, arbitrary-repository sandbox, authenticated multiuser approval or general decision-to-test translation. Source inspection rejects unsupported adapter constructs; process separation does not make untrusted code safe. A passing aggregate means the approved covered checks passed for the pinned revisions.
+
+## Addendum 12 October 2026
+
+The text above describes the prototype. Since commit `bbb0e33`:
+
+- The statement "process separation does not make untrusted code safe" is still true of the static import screen. Workers now also run in a container, which limits network, filesystem writes, memory, CPU, processes and privilege. It does not stop kernel or runtime escapes. See [threat model](THREAT_MODEL.md).
+- The evaluation matrix uses the adapter `python_job_client_v1`. A second adapter, `python_function_v1`, has its own tests in `tests/test_adapters.py`; those tests are not part of the 15-case matrix.
+- The suite has 144 tests at `bbb0e33`. The 15-case matrix result in the evidence index was recorded on the earlier commit named there. It has not been re-recorded for `bbb0e33`.
+- "Does not provide authenticated multiuser approval" is partly outdated: approver identity is now checked from Git. DDG still does not provide a GitHub PR integration (a GitHub Action is planned) or general decision-to-test translation.
+- Human comparison and rehearsal: still none.

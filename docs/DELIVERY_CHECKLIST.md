@@ -65,3 +65,13 @@ The implementation, fixture generator, browser, tests and documentation are buil
 ## If schedule pressure appears
 
 Preserve the behavioral runner, real AI proposal evidence, approval, valid exception, unseen variation, and exact provenance. Simplify visual polish and extra adapters first. Do not replace the engine with a narrated mockup or describe a recorded model output as a fresh call. A smaller working claim is easier to defend in judging.
+
+## Addendum 12 October 2026
+
+The checklist above records the 4 October prototype. These facts changed:
+
+- The suite is now 144 tests (run on commit `bbb0e33`), not 110. The 110-test run in 280.603 seconds remains the record for commit `c3feee81c6403361e449ec677accf97a7e27d899`.
+- "Local subprocess" is no longer the only execution mode. Workers run in a container by default; `DDG_SANDBOX=host` restores the old unsafe mode. See [threat model](THREAT_MODEL.md).
+- "Local reviewer attestation" is no longer enough for a check to run. The approval commit author must be in `.ddg/approvers.json` at base. A fresh demo needs the file that `demo-init` now writes. See [UPGRADING](UPGRADING.md).
+- Docker or Podman is now needed to run checks on a new machine, or `DDG_SANDBOX=host`. Recheck the presentation machine.
+- Not changed: human sample size is zero, and the rehearsals and video recording remain pending.

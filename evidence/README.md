@@ -49,3 +49,12 @@ The prior successful live capture and the later timed-out browser request are se
 [Phase status](../docs/phases/STATUS.md) and [evaluation](../docs/EVALUATION.md) record final tests, release and fresh-checkout reproduction separately from these artifacts.
 
 [remote-reproduction.json](remote-reproduction.json) records fresh GitHub clone `8d5ca14895bd05b638ee37614cf35c7c989b9533`: documented Recorded CLI lifecycle, correct regression/exception/policy exits, real local server/assets and all 15 expected case outcomes. Provider credentials were removed from command environments. The final documentation update retains identical implementation files. Root's full suite passed 110 tests in 280.603 seconds on implementation `c3feee81c6403361e449ec677accf97a7e27d899`.
+
+## Addendum 12 October 2026
+
+Everything above is the unchanged record of 4 October 2026. Later changes that affect how to read it:
+
+- The 110-test figure belongs to commit `c3feee81c6403361e449ec677accf97a7e27d899`. The suite had 144 tests at commit `bbb0e33` (`Ran 144 tests in 399.768s`, `OK`).
+- `case-results.json` and `remote-reproduction.json` were produced when workers ran as host subprocesses and approval trusted a typed name. They have not been regenerated with the container sandbox or approver identity checks.
+- The approval identity `Codex integration reviewer` is a typed label. A demo built with current code approves as the Git author `ddg-demo@example.invalid`, listed in the demo's `.ddg/approvers.json`.
+- No human observations have been added. `reviewer-observations.csv` still has headers only.
