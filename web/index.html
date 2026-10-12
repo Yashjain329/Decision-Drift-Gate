@@ -83,8 +83,9 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
         <li><a class="nav-item" href="#reports" data-view="reports"><svg class="ic" aria-hidden="true"><use href="#i-reports"/></svg><span class="nav-name">Reports</span><span class="nav-state" id="nav-reports"></span></a></li>
         <li class="nav-sep"><a class="nav-item" href="#settings" data-view="settings"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span class="nav-name">Providers &amp; CLI</span><span class="nav-state" id="nav-settings"></span></a></li>
       </ul>
-      <p class="rail-note"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span>Runs on this machine. Untrusted head code executes in the <b>sandbox</b>, never in this browser.</span></p>
+      <p class="rail-note"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg><span>Local only. Head code runs in the <b>sandbox</b>, never in this browser.</span></p>
     </nav>
+
 
     <main id="main" class="main" tabindex="-1">
       <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
@@ -95,62 +96,60 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Overview</p>
             <h1 id="overview-title">Decision integrity</h1>
-            <p class="lede">Does a change need your attention? Every number on this page comes from the local repository state.</p>
           </div>
-          <a class="button button-primary" href="#runs" data-go="runs"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>New run</a>
         </header>
 
+        <!-- Signal first: result, one-line reason, one next action -->
+        <section class="panel signal" id="ov-signal" aria-labelledby="ov-signal-label">
+          <h2 id="ov-signal-label" class="sr-only">Does a change need your attention?</h2>
+          <div class="signal-main">
+            <div class="signal-row">
+              <div class="result" id="ov-result"><span class="result-glyph"><svg aria-hidden="true"><use href="#i-minus"/></svg></span><span class="result-word">Not run</span></div>
+              <span id="ov-exit" class="exit-chip mono">exit —</span>
+            </div>
+            <p id="ov-summary" class="signal-reason">No run yet.</p>
+            <p id="ov-check" class="signal-meta mono"></p>
+          </div>
+          <div class="signal-action">
+            <a id="ov-action" class="button button-primary" href="#runs"><span id="ov-action-text">New run</span><svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          </div>
+        </section>
+
         <div class="grid">
-          <article class="panel latest span-8" aria-labelledby="latest-title">
-            <div class="panel-head"><h2 id="latest-title">Latest comparison</h2><span class="muted">Base <span aria-hidden="true">→</span> Head</span></div>
-            <div id="latest-empty" class="empty">
-              <svg class="ic ic-lg" aria-hidden="true"><use href="#i-runs"/></svg>
-              <p><b>No run yet.</b> Approve a check, then compare a candidate head against the approved base.</p>
-            </div>
-            <div id="latest-body" hidden>
-              <div class="latest-top">
-                <div class="result" id="ov-result"><span class="result-glyph"><svg aria-hidden="true"><use href="#i-minus"/></svg></span><span class="result-word">NOT RUN</span></div>
-                <span id="ov-exit" class="exit-chip mono">exit —</span>
-              </div>
-              <div class="revpair">
-                <div class="rev rev-base"><span class="rev-role">Base · trusted</span><span id="ov-base-ref" class="rev-ref">—</span><code id="ov-base-sha">—</code></div>
-                <svg class="ic rev-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-                <div class="rev rev-head"><span class="rev-role">Head · untrusted</span><span id="ov-head-ref" class="rev-ref">—</span><code id="ov-head-sha">—</code></div>
-              </div>
-              <div class="latest-check">
-                <p class="latest-check-id mono" id="ov-check">—</p>
-                <p id="ov-summary" class="latest-summary">—</p>
-              </div>
-              <a class="text-link" href="#runs" data-go="runs">Open run inspector <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+          <article class="panel span-8" aria-labelledby="latest-title">
+            <div class="panel-head"><h2 id="latest-title">Latest comparison</h2><span id="ov-sandbox" class="tag tag-muted">isolation —</span></div>
+            <div id="latest-empty" class="empty"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-runs"/></svg><p>No run yet.</p></div>
+            <div id="latest-body" class="revpair" hidden>
+              <div class="rev rev-base"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>Base · trusted</span><span id="ov-base-ref" class="rev-ref">—</span><code id="ov-base-sha">—</code></div>
+              <svg class="ic rev-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+              <div class="rev rev-head"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-box"/></svg>Head · untrusted</span><span id="ov-head-ref" class="rev-ref">—</span><code id="ov-head-sha">—</code></div>
             </div>
           </article>
 
-          <article class="panel span-4" aria-labelledby="outcomes-title">
-            <div class="panel-head"><h2 id="outcomes-title">Check outcomes</h2><span class="muted">Latest run</span></div>
-            <ul id="ov-outcomes" class="outcome-list"></ul>
-            <p class="foot-note">A run can contain passing checks and still fail. The overall result and the individual outcomes are always shown together.</p>
-          </article>
-
-          <article class="panel stat span-3"><p class="stat-label">Approved checks</p><p id="st-approved" class="stat-value">0</p><p id="st-approved-note" class="stat-note">none on the approved base</p></article>
-          <article class="panel stat span-3"><p class="stat-label">Active decisions</p><p id="st-decisions" class="stat-value">0</p><p id="st-decisions-note" class="stat-note">—</p></article>
-          <article class="panel stat span-3"><p class="stat-label">Calibration</p><p id="st-calibration" class="stat-value stat-word">Not run</p><p id="st-calibration-note" class="stat-note">3 fixtures required</p></article>
-          <article class="panel stat span-3"><p class="stat-label">Runs this session</p><p id="st-runs" class="stat-value">0</p><p id="st-runs-note" class="stat-note">in this browser tab</p></article>
-
-          <article class="panel span-8" aria-labelledby="history-title">
-            <div class="panel-head"><h2 id="history-title">Runs this session</h2><span class="muted">Jobs created on head · one operation</span></div>
-            <svg id="history-chart" class="chart" role="img" aria-label="No runs yet"></svg>
-            <ul class="legend" aria-label="Legend">
-              <li><span class="key key-pass"></span>Passed</li><li><span class="key key-fail"></span>Violation</li>
-              <li><span class="key key-pre"></span>Pre-existing</li><li><span class="key key-inc"></span>Incomplete / not checked</li>
-              <li><span class="key key-exp"></span>Expected by check</li>
-            </ul>
-            <p class="foot-note">Only runs made while this tab is open. DDG itself stores the latest report, not a history.</p>
-          </article>
 
           <article class="panel span-4" aria-labelledby="attention-title">
             <div class="panel-head"><h2 id="attention-title">Needs attention</h2><span id="attention-count" class="count-chip">0</span></div>
             <ul id="attention" class="attention"></ul>
           </article>
+          <article class="panel span-12" aria-labelledby="outcomes-title">
+            <div class="panel-head"><h2 id="outcomes-title">Check outcomes</h2><span class="muted small">latest run</span></div>
+            <ul id="ov-outcomes" class="outcome-list outcome-strip"></ul>
+          </article>
+          <article class="panel stat span-3"><p class="stat-label">Approved checks</p><p id="st-approved" class="stat-value">0</p><p id="st-approved-note" class="stat-note">—</p></article>
+          <article class="panel stat span-3"><p class="stat-label">Active decisions</p><p id="st-decisions" class="stat-value">0</p><p id="st-decisions-note" class="stat-note">—</p></article>
+          <article class="panel stat span-3"><p class="stat-label">Calibration</p><p id="st-calibration" class="stat-value stat-word">Not run</p><p id="st-calibration-note" class="stat-note">—</p></article>
+          <article class="panel stat span-3"><p class="stat-label">Runs this session</p><p id="st-runs" class="stat-value">0</p><p id="st-runs-note" class="stat-note">this tab only</p></article>
+
+          <article class="panel span-12" aria-labelledby="history-title">
+            <div class="panel-head"><h2 id="history-title">Runs this session</h2><span class="muted small">jobs created on head</span></div>
+            <svg id="history-chart" class="chart" role="img" aria-label="No runs yet"></svg>
+            <ul class="legend" aria-label="Legend">
+              <li><span class="key key-pass"></span>Passed</li><li><span class="key key-fail"></span>Violation</li>
+              <li><span class="key key-pre"></span>Pre-existing</li><li><span class="key key-inc"></span>Not checked</li>
+              <li><span class="key key-exp"></span>Expected</li>
+            </ul>
+          </article>
+
         </div>
       </section>
 
@@ -160,7 +159,7 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Decisions</p>
             <h1 id="decisions-title">What the team agreed to</h1>
-            <p class="lede">Decisions are versioned records in <code>.ddg/decisions/</code>. Read the intent before you read a failure.</p>
+            <p class="lede">Versioned records in <code>.ddg/decisions/</code>. Newest first.</p>
           </div>
         </header>
         <ol id="decision-list" class="decision-list" aria-label="Decision history, newest first"></ol>
@@ -173,7 +172,7 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Check Studio</p>
             <h1 id="checks-title">Does this check prove the decision?</h1>
-            <p class="lede">A check becomes eligible only when all three fixtures behave as expected. Eligibility is not approval.</p>
+            <p class="lede">Eligible means all three fixtures behaved. It is not approval.</p>
           </div>
           <div class="state-pair">
             <span id="cs-eligibility" class="tag tag-muted">Calibration · not run</span>
@@ -194,16 +193,14 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
 
           <article class="panel span-7" aria-labelledby="proposal-title">
             <div class="panel-head"><h2 id="proposal-title">Proposal</h2><code id="check-id" class="muted">not recorded</code></div>
+            <pre id="assertions" class="code-block code-lg" aria-label="Check assertions">—</pre>
             <dl class="kv">
               <div><dt>Decision</dt><dd id="check-decision">—</dd></div>
               <div><dt>Scenario</dt><dd id="check-scenario" class="mono">—</dd></div>
               <div><dt>Adapter</dt><dd id="check-adapter" class="mono">—</dd></div>
             </dl>
-            <p id="check-rationale" class="body-copy">Draft a proposal to inspect its scenario, assertions and decision citation.</p>
-            <p class="field-label">Assertions</p>
-            <pre id="assertions" class="code-block" aria-label="Check assertions">—</pre>
-            <p class="field-label">Grounded in</p>
-            <ul id="check-citation" class="citations"><li>No citation loaded.</li></ul>
+            <details class="inline-details"><summary>Why this check</summary><p id="check-rationale" class="body-copy">—</p></details>
+            <details class="inline-details"><summary id="citation-summary">Grounded in</summary><ul id="check-citation" class="citations"><li>No citation loaded.</li></ul></details>
           </article>
 
           <article class="panel span-5" aria-labelledby="matrix-title">
@@ -211,11 +208,11 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
             <svg id="cal-chart" class="chart chart-compact" role="img" aria-label="Calibration observations: not run"></svg>
             <div class="table-wrap">
               <table class="matrix">
-                <thead><tr><th scope="col">Fixture</th><th scope="col">Expected</th><th scope="col">Observed</th><th scope="col">Jobs</th><th scope="col">Eligibility</th></tr></thead>
+                <thead><tr><th scope="col">Fixture</th><th scope="col">Expected</th><th scope="col">Observed</th><th scope="col">Jobs</th><th scope="col"><span class="sr-only">Eligibility</span></th></tr></thead>
                 <tbody id="matrix-body"></tbody>
               </table>
             </div>
-            <p id="calibration-explanation" class="foot-note">Validation executes the proposal against all three fixtures in the sandbox.</p>
+            <p id="calibration-explanation" class="foot-note">Runs the proposal against all three fixtures.</p>
             <button class="button button-secondary full" id="validate-button" type="button" disabled>Validate proposal</button>
           </article>
         </div>
@@ -229,7 +226,6 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Runs &amp; Regressions</p>
             <h1 id="runs-title">Run inspector</h1>
-            <p class="lede">The base revision is the authority. The head is untrusted and runs only inside the sandbox.</p>
           </div>
         </header>
 
@@ -237,70 +233,82 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <label class="field-label" for="scenario-select">Candidate head</label>
           <select id="scenario-select" name="scenario"></select>
           <button class="button button-primary" id="run-button" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>Run approved checks</button>
-          <code id="run-cli" class="cli-hint">ddg run --base approved-base --head …</code>
+          <code id="run-cli" class="cli-hint">ddg run --base … --head …</code>
         </div>
-        <p id="stale-notice" class="stale" hidden><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Inputs changed since this report. Rerun required; the result below is not current.</p>
+        <p id="stale-notice" class="stale" hidden><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Refs moved since this run. Rerun before trusting it.</p>
 
         <div id="empty-run" class="panel empty">
           <svg class="ic ic-lg" aria-hidden="true"><use href="#i-runs"/></svg>
-          <p><b>No run yet.</b> Pick a candidate head and run the approved checks. Results appear only after the local engine completes.</p>
+          <p>No run yet. Pick a candidate head and run the approved checks.</p>
         </div>
 
         <div id="run-content" hidden>
+          <!-- 1. signal -->
           <div class="run-summary" id="run-summary">
-            <div class="result" id="run-result"><span class="result-glyph"><svg aria-hidden="true"><use href="#i-minus"/></svg></span><span class="result-word">NOT RUN</span></div>
+            <div class="result" id="run-result"><span class="result-glyph"><svg aria-hidden="true"><use href="#i-minus"/></svg></span><span class="result-word">Not run</span></div>
             <span id="run-exit" class="exit-chip mono">exit —</span>
             <p id="run-summary-text" class="run-summary-text">—</p>
-            <p class="boundary"><code>ddg run</code> reports this result. It does not block anything; your CI job or reviewer acts on the exit code.</p>
           </div>
 
-          <div class="revpair revpair-lg">
-            <div class="rev rev-base"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>Base revision</span><span id="run-base-ref" class="rev-ref">—</span><code id="run-base-sha">—</code><span class="rev-note">Trusted comparison reference. Approved checks are read from here.</span></div>
+          <!-- 2. trust boundary -->
+          <div class="revpair revpair-run">
+            <div class="rev rev-base"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>Base · trusted</span><span id="run-base-ref" class="rev-ref">—</span><code id="run-base-sha" title="">—</code></div>
             <svg class="ic rev-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-            <div class="rev rev-head"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-box"/></svg>Head revision</span><span id="run-head-ref" class="rev-ref">—</span><code id="run-head-sha">—</code><span class="rev-note">Untrusted change under review. Executed in <b id="run-sandbox">—</b>.</span></div>
+            <div class="rev rev-head"><span class="rev-role"><svg class="ic" aria-hidden="true"><use href="#i-box"/></svg>Head · untrusted</span><span id="run-head-ref" class="rev-ref">—</span><code id="run-head-sha" title="">—</code></div>
+            <div class="rev rev-sandbox"><span class="rev-role">Isolation</span><span id="run-sandbox" class="rev-ref">—</span><span class="rev-note">head code ran here</span></div>
           </div>
 
+          <!-- 3. outcomes + selected check -->
           <div class="inspector">
             <section class="panel results" aria-labelledby="results-title">
-              <div class="panel-head"><h2 id="results-title">Individual check results</h2><span id="results-count" class="muted">—</span></div>
+              <div class="panel-head"><h2 id="results-title">Check results</h2><span id="results-count" class="muted small">—</span></div>
               <div id="result-groups"></div>
+              <p id="results-zero" class="zero-line"></p>
               <div id="run-warnings" class="warnings" hidden></div>
             </section>
 
             <section class="panel detail" id="detail" aria-labelledby="detail-title" aria-live="polite">
-              <div class="panel-head"><h2 id="detail-title">Check detail</h2><span id="detail-verdict" class="tag tag-muted">—</span></div>
-              <p id="detail-explain" class="body-copy">Select a check result to inspect its evidence.</p>
-              <div class="detail-block">
-                <p class="field-label">Decision</p>
-                <p id="detail-decision" class="decision-quote">—</p>
+              <div class="panel-head">
+                <h2 id="detail-title"><span id="detail-check">—</span></h2>
+                <span id="detail-verdict" class="tag tag-muted">—</span>
               </div>
-              <div class="detail-block">
-                <p class="field-label">Approved check</p>
-                <p class="mono small"><span id="detail-check">—</span> · digest <span id="detail-digest">—</span></p>
-                <pre id="detail-assertions" class="code-block">—</pre>
-              </div>
-              <div class="detail-block">
-                <div class="panel-head tight"><p class="field-label">Base vs head · jobs created for one operation</p></div>
+              <p id="detail-explain" class="detail-explain">Select a check result.</p>
+              <p id="detail-decision" class="detail-decision">—</p>
+              <div class="detail-chart">
                 <svg id="state-field" class="chart" role="img" aria-label="Observed jobs: not run"></svg>
-                <div class="side-by-side">
-                  <div><p class="side-title side-base">Base result</p><p id="detail-base" class="side-result">—</p><ol id="trace-base" class="trace"></ol></div>
-                  <div><p class="side-title side-head">Head result</p><p id="detail-head" class="side-result">—</p><ol id="trace-head" class="trace"></ol></div>
-                </div>
               </div>
-              <div class="detail-block" id="detail-diff-block" hidden>
-                <p class="field-label">Change in scope</p>
-                <pre id="detail-diff" class="code-block diff"></pre>
-              </div>
-              <div class="detail-block">
-                <p class="field-label">Approval provenance</p>
-                <p id="detail-approval" class="body-copy">—</p>
-              </div>
-              <div class="detail-block">
-                <p class="field-label">Ordinary tests (no simulated failure)</p>
-                <p class="mono small">base <b id="ordinary-base">—</b> · head <b id="ordinary-head">—</b></p>
-              </div>
-              <a class="text-link" href="#reports" data-go="reports">Open full audit report <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
             </section>
+          </div>
+
+          <!-- 4. evidence on demand -->
+          <div class="evidence-stack" aria-label="Evidence">
+            <details class="evidence" id="ev-traces" open>
+              <summary><span>Service traces</span><span id="ev-traces-meta" class="summary-meta">base vs head</span></summary>
+              <div class="side-by-side">
+                <div><p class="side-title side-base">Base</p><p id="detail-base" class="side-result">—</p><ol id="trace-base" class="trace"></ol></div>
+                <div><p class="side-title side-head">Head</p><p id="detail-head" class="side-result">—</p><ol id="trace-head" class="trace"></ol></div>
+              </div>
+            </details>
+            <details class="evidence" id="detail-diff-block">
+              <summary><span>Change in scope</span><span id="ev-diff-meta" class="summary-meta">diff</span></summary>
+              <pre id="detail-diff" class="code-block diff"></pre>
+            </details>
+            <details class="evidence">
+              <summary><span>Approved check</span><span id="ev-check-meta" class="summary-meta">assertions · digest</span></summary>
+              <div class="ev-body">
+                <pre id="detail-assertions" class="code-block">—</pre>
+                <p class="mono small muted">digest <span id="detail-digest">—</span></p>
+              </div>
+            </details>
+            <details class="evidence">
+              <summary><span>Approval provenance</span><span id="ev-approval-meta" class="summary-meta">—</span></summary>
+              <p id="detail-approval" class="ev-body body-copy">—</p>
+            </details>
+            <details class="evidence">
+              <summary><span>Ordinary tests</span><span id="ev-ordinary-meta" class="summary-meta">no simulated failure</span></summary>
+              <p class="ev-body mono small">base <b id="ordinary-base">—</b> · head <b id="ordinary-head">—</b></p>
+            </details>
+            <a class="text-link" href="#reports">Full audit report <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
           </div>
         </div>
       </section>
@@ -311,16 +319,16 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Approvals</p>
             <h1 id="approvals-title">Who authorized this exact check?</h1>
-            <p class="lede">Approval binds a reviewer to one check digest and its calibration. The gate trusts the Git author of the approval commit, not a typed name.</p>
+            <p class="lede">The gate trusts the Git author of the approval commit, not a typed name.</p>
           </div>
           <span id="approval-state" class="tag tag-muted">Pending</span>
         </header>
 
         <ol class="flow" aria-label="Approval flow">
-          <li class="flow-step" id="flow-1"><span class="flow-no">01</span><div><h3>Review the exact check</h3><p id="flow-1-text">No proposal loaded.</p></div></li>
-          <li class="flow-step" id="flow-2"><span class="flow-no">02</span><div><h3>Verify eligibility</h3><p id="flow-2-text">Calibration not run.</p></div></li>
-          <li class="flow-step" id="flow-3"><span class="flow-no">03</span><div><h3>Authorize through the trusted workflow</h3><p id="flow-3-text">Waiting for an eligible check.</p></div></li>
-          <li class="flow-step" id="flow-4"><span class="flow-no">04</span><div><h3>Confirm committed provenance</h3><p id="flow-4-text">Verified at the next run.</p></div></li>
+          <li class="flow-step" id="flow-1"><span class="flow-no">01</span><div><h3>Review exact check</h3><p id="flow-1-text">No proposal.</p></div></li>
+          <li class="flow-step" id="flow-2"><span class="flow-no">02</span><div><h3>Verify eligibility</h3><p id="flow-2-text">Not calibrated.</p></div></li>
+          <li class="flow-step" id="flow-3"><span class="flow-no">03</span><div><h3>Authorize</h3><p id="flow-3-text">Waiting.</p></div></li>
+          <li class="flow-step" id="flow-4"><span class="flow-no">04</span><div><h3>Confirm provenance</h3><p id="flow-4-text">Waiting.</p></div></li>
         </ol>
 
         <div class="grid">
@@ -329,9 +337,9 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
             <label class="field-label" for="reviewer">Review label</label>
             <input id="reviewer" name="reviewer" autocomplete="name" required maxlength="160" placeholder="Your name">
             <label class="field-label" for="reason">Review note</label>
-            <textarea id="reason" name="reason" rows="3" required maxlength="2000" placeholder="What did you check before approving?"></textarea>
+            <textarea id="reason" name="reason" rows="3" required maxlength="2000" placeholder="What did you check?"></textarea>
             <button class="button button-primary full" id="approve-button" type="submit" disabled><svg class="ic" aria-hidden="true"><use href="#i-approvals"/></svg>Approve exact check</button>
-            <p class="foot-note">Local demo: the server commits the approval as the demo identity. In a real repository, approval lands as a signed commit by an allowlisted approver (<code>ddg approve</code>, then <code>git commit -S</code>).</p>
+            <details class="inline-details"><summary>How this is trusted</summary><p class="body-copy">In this demo the server commits the approval as the demo identity. In a real repository it lands as a signed commit by an allowlisted approver (<code>ddg approve</code>, then <code>git commit -S</code>).</p></details>
           </form>
 
           <section id="approval-record" class="panel span-6" aria-labelledby="record-title" hidden>
@@ -341,20 +349,28 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
               <div><dt>Review label</dt><dd id="rec-label">—</dd></div>
               <div><dt>Review note</dt><dd id="rec-note">—</dd></div>
               <div><dt>Approved at</dt><dd id="rec-time" class="mono">—</dd></div>
-              <div><dt>Bundle digest</dt><dd id="rec-digest" class="mono hash">—</dd></div>
-              <div><dt>Validation digest</dt><dd id="rec-vdigest" class="mono hash">—</dd></div>
             </dl>
+            <details class="inline-details"><summary>Digests</summary>
+              <dl class="kv kv-stack">
+                <div><dt>Bundle</dt><dd id="rec-digest" class="mono hash">—</dd></div>
+                <div><dt>Validation</dt><dd id="rec-vdigest" class="mono hash">—</dd></div>
+              </dl>
+            </details>
           </section>
 
           <section class="panel span-6" aria-labelledby="git-title">
             <div class="panel-head"><h2 id="git-title">Git provenance</h2><span id="git-state" class="tag tag-muted">Not yet verified</span></div>
             <dl class="kv kv-stack">
-              <div><dt>Verified Git author</dt><dd id="rec-author">verified when a run reads the approval commit</dd></div>
-              <div><dt>Approval commit</dt><dd id="rec-commit" class="mono">—</dd></div>
+              <div><dt>Verified Git author</dt><dd id="rec-author">—</dd></div>
               <div><dt>Signature</dt><dd id="rec-signature">—</dd></div>
               <div><dt>Signed commits required</dt><dd id="rec-require">—</dd></div>
-              <div><dt>Calibration fixtures</dt><dd id="rec-hashes" class="mono hash">—</dd></div>
             </dl>
+            <details class="inline-details"><summary>Commit and fixtures</summary>
+              <dl class="kv kv-stack">
+                <div><dt>Approval commit</dt><dd id="rec-commit" class="mono hash">—</dd></div>
+                <div><dt>Calibration fixtures</dt><dd id="rec-hashes" class="mono hash">—</dd></div>
+              </dl>
+            </details>
           </section>
         </div>
       </section>
@@ -365,11 +381,11 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Reports</p>
             <h1 id="reports-title">Audit report</h1>
-            <p class="lede">The same report <code>ddg run --out report.json</code> writes and the GitHub Action posts to a pull request.</p>
+            <p class="lede">Same report as <code>ddg run --out</code> and the GitHub Action comment.</p>
           </div>
           <button class="button button-secondary" id="download-report" type="button" disabled><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>Download JSON</button>
         </header>
-        <div id="empty-report" class="panel empty"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-reports"/></svg><p><b>No report.</b> Run the approved checks to produce one.</p></div>
+        <div id="empty-report" class="panel empty"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-reports"/></svg><p>No report yet. Run the approved checks.</p></div>
         <div id="report-content" class="grid" hidden>
           <article class="panel span-5">
             <div class="panel-head"><h2>Run metadata</h2><span id="rep-fresh" class="tag tag-muted">—</span></div>
@@ -396,35 +412,35 @@ FORM: Operate. Fixed navigation, 12-column fluid content, detail on demand.
           <div>
             <p class="eyebrow">Workspace / Providers &amp; CLI</p>
             <h1 id="settings-title">Providers and command line</h1>
-            <p class="lede">Proposal generation is separate from approval and enforcement. A provider failure never means a check failed.</p>
+            <p class="lede">A provider failure never means a check failed.</p>
           </div>
         </header>
         <div class="grid">
           <article class="panel span-5">
             <div class="panel-head"><h2>Proposal provenance</h2><span id="prov-mode" class="tag tag-muted">—</span></div>
             <dl class="kv kv-stack" id="prov-meta"></dl>
-            <p class="foot-note">Configure with <code>DDG_PROVIDER</code> and <code>DDG_MODEL</code>. List what is available with <code>ddg providers</code>.</p>
+            <p class="foot-note">Set <code>DDG_PROVIDER</code> and <code>DDG_MODEL</code>. List options with <code>ddg providers</code>.</p>
           </article>
           <article class="panel span-7">
             <div class="panel-head"><h2>Exit codes · <code>ddg run</code></h2></div>
             <ul class="exit-list">
-              <li><span class="exit-chip mono tone-pass">0</span><b>PASSED_CHECKS</b><span>every approved check held</span></li>
-              <li><span class="exit-chip mono tone-fail">1</span><b>FAILED</b><span>a check detected a violation</span></li>
-              <li><span class="exit-chip mono tone-inc">2</span><b>INCOMPLETE</b><span>the gate could not prove the change safe; never treat as a pass</span></li>
-              <li><span class="exit-chip mono tone-muted">3</span><b>Usage / infrastructure</b><span>bad arguments, unreadable repo, no container runtime; not a check result</span></li>
+              <li><span class="exit-chip mono tone-pass">0</span><b>Checks passed</b><span>every approved check held</span></li>
+              <li><span class="exit-chip mono tone-fail">1</span><b>Failed</b><span>a check detected a violation</span></li>
+              <li><span class="exit-chip mono tone-inc">2</span><b>Incomplete</b><span>not proven safe; never a pass</span></li>
+              <li><span class="exit-chip mono tone-muted">3</span><b>Usage / infra</b><span>bad input or no container runtime</span></li>
             </ul>
           </article>
           <article class="panel span-12">
-            <div class="panel-head"><h2>Commands</h2><span class="muted">python -m ddg &lt;command&gt;</span></div>
+            <div class="panel-head"><h2>Commands</h2><span class="muted small">python -m ddg &lt;command&gt;</span></div>
             <ul class="cmd-grid">
-              <li><code>init</code><span>create <code>.ddg/</code> and the approvers allowlist</span></li>
-              <li><code>propose</code><span>draft a manual, recorded or live check</span></li>
-              <li><code>validate</code><span>calibrate against bad, good and exception fixtures</span></li>
-              <li><code>approve</code><span>record reviewer approval after calibration</span></li>
-              <li><code>run</code><span>compare approved checks on base and head</span></li>
-              <li><code>status</code><span>check whether report refs have moved</span></li>
-              <li><code>providers</code><span>list model providers for live proposals</span></li>
-              <li><code>serve</code><span>start this local viewer</span></li>
+              <li><code>init</code><span>create <code>.ddg/</code> and approvers</span></li>
+              <li><code>propose</code><span>draft a check</span></li>
+              <li><code>validate</code><span>calibrate on three fixtures</span></li>
+              <li><code>approve</code><span>record reviewer approval</span></li>
+              <li><code>run</code><span>compare base and head</span></li>
+              <li><code>status</code><span>detect moved refs</span></li>
+              <li><code>providers</code><span>list model providers</span></li>
+              <li><code>serve</code><span>start this viewer</span></li>
             </ul>
           </article>
         </div>

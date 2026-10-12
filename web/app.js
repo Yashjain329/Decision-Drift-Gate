@@ -31,6 +31,7 @@
     return svg;
   };
   const visible = (el, show) => { el.hidden = !show; };
+  const shaText = (el, sha) => { el.textContent = typeof sha === 'string' && sha ? sha.slice(0, 10) : '—'; el.title = sha || ''; };
   const short = (sha, n = 10) => (typeof sha === 'string' && sha ? sha.slice(0, n) : '—');
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const clock = (iso) => { const d = iso ? new Date(iso) : null; return d && !Number.isNaN(d.valueOf()) ? d.toISOString().slice(11, 19) : '—'; };
@@ -43,21 +44,25 @@
   };
 
   // ---- the product's vocabulary -------------------------------------------------------------------
+  // Human label first; the exact enum is kept as secondary audit metadata.
   const OUTCOMES = [
-    { verdict: 'VIOLATION_INTRODUCED', tone: 'fail', glyph: 'x', desc: 'Base passes; head fails. Introduced by this change.' },
-    { verdict: 'PRE_EXISTING_FAILURE', tone: 'pre', glyph: 'history', desc: 'Already fails on base. Not attributed to this change.' },
-    { verdict: 'RESOLVED', tone: 'pass', glyph: 'resolved', desc: 'Base fails; head passes.' },
-    { verdict: 'CHECK_PASSED', tone: 'pass', glyph: 'check', desc: 'The approved check passes on both revisions.' },
-    { verdict: 'NOT_CHECKED', tone: 'inc', glyph: 'help', desc: 'No result could be established. The reason is shown.' }
+    { verdict: 'VIOLATION_INTRODUCED', label: 'Violation introduced', tone: 'fail', glyph: 'x', desc: 'Passes on base, fails on head.' },
+    { verdict: 'PRE_EXISTING_FAILURE', label: 'Pre-existing failure', tone: 'pre', glyph: 'history', desc: 'Already fails on base. Not this change.' },
+    { verdict: 'RESOLVED', label: 'Resolved', tone: 'pass', glyph: 'resolved', desc: 'Fails on base, passes on head.' },
+    { verdict: 'CHECK_PASSED', label: 'Check passed', tone: 'pass', glyph: 'check', desc: 'Passes on both revisions.' },
+    { verdict: 'NOT_CHECKED', label: 'Not checked', tone: 'inc', glyph: 'help', desc: 'No result established.' }
   ];
   const outcomeOf = (verdict) => OUTCOMES.find((o) => o.verdict === verdict) || OUTCOMES[4];
+  const AGGREGATE = { PASSED_CHECKS: 'Checks passed', FAILED: 'Failed', INCOMPLETE: 'Incomplete' };
   const VERDICT_TEXT = {
-    VIOLATION_INTRODUCED: 'The approved check passed on base but failed on head: this change introduces the violation.',
-    PRE_EXISTING_FAILURE: 'The check already fails on base, so the failure is not attributed to this change.',
-    RESOLVED: 'The check fails on base and passes on head: this change resolves an existing failure.',
-    CHECK_PASSED: 'The approved check passed on both revisions.',
-    NOT_CHECKED: 'Execution did not establish a result for both revisions.'
+    VIOLATION_INTRODUCED: 'Passed on base, failed on head. This change introduces the violation.',
+    PRE_EXISTING_FAILURE: 'Already failing on base. Not caused by this change.',
+    RESOLVED: 'Failed on base, passes on head. This change fixes it.',
+    CHECK_PASSED: 'Held on both revisions.',
+    NOT_CHECKED: 'No result for both revisions.'
   };
+  const outcomeTag = (el, verdict) => { const o = outcomeOf(verdict); tag(el, o.label, o.tone, o.glyph); el.title = verdict || ''; };
+  const enumLine = (label, raw) => { const f = document.createDocumentFragment(); f.append(node('span', 'h-label', label), node('span', 'enum', raw)); return f; };
   const SIGNATURE = { G: 'good signature', N: 'unsigned', B: 'bad signature', U: 'untrusted signature', E: 'signature could not be checked', X: 'expired signature', Y: 'expired key', R: 'revoked key' };
   const FIXTURES = [
     { key: 'bad', name: 'Known-bad implementation', expect: 'FAIL' },
@@ -76,18 +81,19 @@
   };
 
   function overall(report, stale) {
-    if (!report) return { tone: 'muted', word: 'NOT RUN', glyph: 'minus', exit: '—', summary: 'No run yet.' };
-    if (stale) return { tone: 'inc', word: 'STALE', glyph: 'clock', exit: '—', summary: 'This report is bound to earlier revisions. Rerun required before it can be trusted.' };
+    if (!report) return { tone: 'muted', word: 'Not run', raw: '', glyph: 'minus', exit: '—', summary: 'No run yet.' };
+    if (stale) return { tone: 'inc', word: 'Stale', raw: report.aggregate, glyph: 'clock', exit: '—', summary: 'Refs moved since this run. Rerun before trusting it.' };
     const first = realChecks(report).find((c) => c.verdict !== 'CHECK_PASSED') || realChecks(report)[0];
-    if (report.aggregate === 'PASSED_CHECKS') return { tone: 'pass', word: 'PASSED', glyph: 'check', exit: '0', summary: VERDICT_TEXT[first?.verdict] || 'Every approved check held.' };
-    if (report.aggregate === 'FAILED') return { tone: 'fail', word: 'FAILED', glyph: 'x', exit: '1', summary: VERDICT_TEXT[first?.verdict] || 'An approved check detected a violation.' };
+    const word = AGGREGATE[report.aggregate] || 'Incomplete';
+    if (report.aggregate === 'PASSED_CHECKS') return { tone: 'pass', word, raw: report.aggregate, glyph: 'check', exit: '0', summary: VERDICT_TEXT[first?.verdict] || 'Every approved check held.' };
+    if (report.aggregate === 'FAILED') return { tone: 'fail', word, raw: report.aggregate, glyph: 'x', exit: '1', summary: VERDICT_TEXT[first?.verdict] || 'An approved check detected a violation.' };
     const codes = new Set(warningCodes(report));
-    const summary = codes.has('POLICY_REVIEW_REQUIRED') ? 'The head changes approved policy. A reviewer must approve the new policy before this can pass.'
-      : codes.has('MISSING_APPROVED_COVERAGE') || codes.has('NO_ACTIVE_APPROVED_CHECKS') ? 'An active decision has no approved check on the base revision.'
-        : codes.has('APPROVER_NOT_VERIFIED') ? 'The approver of this check could not be verified, so the check did not run.'
-          : codes.has('EXECUTION_ERROR') || codes.has('AUTHORITY_UNAVAILABLE') ? 'Execution or authority evidence is incomplete. Inspect the reason below.'
-            : 'The gate could not prove the change safe. Never treat this as a pass.';
-    return { tone: 'inc', word: 'INCOMPLETE', glyph: 'help', exit: '2', summary };
+    const summary = codes.has('POLICY_REVIEW_REQUIRED') ? 'Head changes approved policy. Needs review before it can pass.'
+      : codes.has('MISSING_APPROVED_COVERAGE') || codes.has('NO_ACTIVE_APPROVED_CHECKS') ? 'An active decision has no approved check.'
+        : codes.has('APPROVER_NOT_VERIFIED') ? 'Approver not verified, so the check did not run.'
+          : codes.has('EXECUTION_ERROR') || codes.has('AUTHORITY_UNAVAILABLE') ? 'Execution evidence is incomplete.'
+            : 'Not proven safe. Never treat this as a pass.';
+    return { tone: 'inc', word, raw: report.aggregate || 'INCOMPLETE', glyph: 'help', exit: '2', summary };
   }
 
   function setResult(el, model) {
@@ -224,7 +230,7 @@
       render();
       if (route === 'run') {
         const m = overall(state.value.report, state.value.report_stale === true);
-        setNotice(`Run completed: ${m.word}, exit ${m.exit}.${state.view === 'runs' ? '' : ' Open Runs & Regressions to inspect it.'}`, m.tone === 'fail' ? 'error' : 'success');
+        setNotice(`Run completed: ${m.word}, exit ${m.exit}.${state.view === 'runs' ? '' : ' See Runs & Regressions.'}`, m.tone === 'fail' ? 'error' : 'success');
       } else {
         setNotice({ propose: 'Proposal drafted. Validate it next.', validate: 'Calibration finished.', approve: 'Approval recorded. It is verified when the next run reads the approval commit.' }[route], 'success');
       }
@@ -298,18 +304,31 @@
     const report = data.report;
     const stale = data.report_stale === true;
     const m = overall(report, stale);
+    const items = attentionItems(data, m);
+
+    // Signal: result, one-line reason, one next action.
+    const signal = byId('ov-signal');
+    signal.className = `panel signal tone-${m.tone}`;
+    setResult(byId('ov-result'), m);
+    setExit(byId('ov-exit'), m);
+    visible(byId('ov-exit'), Boolean(report));
+    const focus = realChecks(report).find((c) => c.verdict !== 'CHECK_PASSED') || realChecks(report)[0];
+    safeText(byId('ov-summary'), report ? m.summary : items[0]?.title || 'No run yet.');
+    const meta = byId('ov-check');
+    meta.replaceChildren();
+    if (focus) meta.append(document.createTextNode(`${focus.check_id} · ${focus.decision?.id || focus.check?.decision_id || ''} · `), node('span', 'enum', focus.verdict));
+    const next = items.find((i) => i.href) || { href: 'runs', link: 'Open run inspector' };
+    byId('ov-action').href = `#${next.href}`;
+    safeText(byId('ov-action-text'), next.link);
+
     visible(byId('latest-empty'), !report);
     visible(byId('latest-body'), Boolean(report));
+    tag(byId('ov-sandbox'), report?.sandbox ? (report.sandbox === 'host' ? 'host · unsafe' : `isolated · ${report.sandbox}`) : 'isolation —', !report?.sandbox ? 'muted' : report.sandbox === 'host' ? 'fail' : 'muted', report?.sandbox ? 'box' : null);
     if (report) {
-      setResult(byId('ov-result'), m);
-      setExit(byId('ov-exit'), m);
       safeText(byId('ov-base-ref'), report.base_ref, 'base');
       safeText(byId('ov-head-ref'), data.scenarios?.find((s) => s.id === scenarioId(report, data.scenarios || []))?.label || report.head_ref, 'head');
-      safeText(byId('ov-base-sha'), short(report.base_sha));
-      safeText(byId('ov-head-sha'), short(report.head_sha));
-      const focus = realChecks(report).find((c) => c.verdict !== 'CHECK_PASSED') || realChecks(report)[0];
-      safeText(byId('ov-check'), focus ? `${focus.check_id} · ${focus.decision?.id || focus.check?.decision_id || 'decision'} · ${focus.verdict}` : 'No approved check produced a result');
-      safeText(byId('ov-summary'), m.summary);
+      shaText(byId('ov-base-sha'), report.base_sha);
+      shaText(byId('ov-head-sha'), report.head_sha);
     }
 
     const counts = Object.fromEntries(OUTCOMES.map((o) => [o.verdict, 0]));
@@ -318,13 +337,14 @@
     list.replaceChildren();
     OUTCOMES.forEach((o) => {
       const li = node('li', `outcome o-${o.tone}${counts[o.verdict] ? '' : ' is-zero'}`);
-      li.append(icon(o.glyph), node('span', 'outcome-name', o.verdict), node('span', 'outcome-n', report ? counts[o.verdict] : '—'));
+      const name = node('span', 'outcome-name');
+      name.append(enumLine(o.label, o.verdict));
+      li.append(icon(o.glyph), name, node('span', 'outcome-n', report ? counts[o.verdict] : '—'));
       list.append(li);
     });
 
-    const approvedChecks = report ? realChecks(report).length : data.approval ? 1 : 0;
-    safeText(byId('st-approved'), approvedChecks);
-    safeText(byId('st-approved-note'), data.approval ? `${data.approval.check_id} on the approved base` : 'none on the approved base');
+    safeText(byId('st-approved'), report ? realChecks(report).length : data.approval ? 1 : 0);
+    safeText(byId('st-approved-note'), data.approval?.check_id, 'none yet');
     const active = report?.active_decisions || [data.new_decision].filter((d) => d?.status === 'active');
     safeText(byId('st-decisions'), active.length);
     safeText(byId('st-decisions-note'), active.map((d) => d.id).join(', '), 'none recorded');
@@ -332,9 +352,9 @@
     const cal = byId('st-calibration');
     safeText(cal, v ? (v.eligible ? 'Eligible' : 'Needs work') : data.draft ? 'Not run' : 'No draft');
     setTone(cal, v ? (v.eligible ? 'pass' : 'fail') : null);
-    safeText(byId('st-calibration-note'), v ? `${FIXTURES.filter((f) => v.cases?.[f.key]?.observation?.status === f.expect).length} of 3 fixtures matched` : '3 fixtures required');
+    safeText(byId('st-calibration-note'), v ? `${FIXTURES.filter((f) => v.cases?.[f.key]?.observation?.status === f.expect).length} of 3 fixtures` : '3 fixtures required');
     safeText(byId('st-runs'), history.length);
-    safeText(byId('st-runs-note'), history.length ? `last at ${clock(history[history.length - 1].at)} UTC` : 'in this browser tab');
+    safeText(byId('st-runs-note'), history.length ? `last ${clock(history[history.length - 1].at)} UTC` : 'this tab only');
 
     const chart = byId('history-chart');
     if (!history.length) {
@@ -350,12 +370,11 @@
         tone: h.aggregate === 'INCOMPLETE' || h.verdict === 'NOT_CHECKED' || h.jobs === null ? 'inc' : h.verdict === 'PRE_EXISTING_FAILURE' ? 'pre' : h.aggregate === 'FAILED' ? 'fail' : 'pass'
       }));
       const expected = history.map((h) => h.expected).find(Number.isInteger) ?? null;
-      while (cols.length < 6) cols.push({ placeholder: true });
+      while (cols.length < 12) cols.push({ placeholder: true });
       drawColumns(chart, cols, { expected, stacked: false, colW: 34, gap: 48, unit: 38 });
-      chart.setAttribute('aria-label', `Runs this session: ${history.map((h) => `${h.label} ${h.aggregate}${h.jobs === null ? ', not observed' : `, ${plural(h.jobs, 'job')}`}`).join('; ')}`);
+      chart.setAttribute('aria-label', `Runs this session: ${history.map((h) => `${h.label} ${AGGREGATE[h.aggregate] || h.aggregate}${h.jobs === null ? ', not observed' : `, ${plural(h.jobs, 'job')}`}`).join('; ')}`);
     }
 
-    const items = attentionItems(data, m);
     const ul = byId('attention');
     ul.replaceChildren();
     items.forEach((it) => {
@@ -367,31 +386,28 @@
       li.append(icon(it.glyph), body);
       ul.append(li);
     });
-    const actionable = items.filter((i) => i.tone !== 'ok').length;
-    const count = byId('attention-count');
-    safeText(count, actionable);
-    count.className = `count-chip${actionable ? '' : ''}`;
+    safeText(byId('attention-count'), items.filter((i) => i.tone !== 'ok').length);
   }
 
   function attentionItems(data, m) {
     const out = [];
     const report = data.report;
     const v = data.validation;
-    if (!data.draft) out.push({ tone: 'todo', glyph: 'checks', title: 'No check drafted.', text: 'Draft a check for the active decision.', href: 'checks', link: 'Open Check Studio' });
-    else if (!v) out.push({ tone: 'todo', glyph: 'checks', title: 'Proposal not calibrated.', text: 'Validate it against the three fixtures.', href: 'checks', link: 'Validate' });
-    else if (!v.eligible) out.push({ tone: 'fail', glyph: 'x', title: 'Calibration failed.', text: 'This check cannot be approved.', href: 'checks', link: 'See the matrix' });
-    else if (!data.approval) out.push({ tone: 'todo', glyph: 'approvals', title: `${data.draft.check?.id || 'Check'} is eligible.`, text: 'It still needs human approval of the exact check.', href: 'approvals', link: 'Review and approve' });
-    if (data.approval && !report) out.push({ tone: 'todo', glyph: 'play', title: 'No run yet.', text: 'Compare a candidate head against the approved base.', href: 'runs', link: 'New run' });
+    if (!data.draft) out.push({ tone: 'todo', glyph: 'checks', title: 'No check drafted.', href: 'checks', link: 'Draft a check' });
+    else if (!v) out.push({ tone: 'todo', glyph: 'checks', title: 'Proposal not calibrated.', href: 'checks', link: 'Validate proposal' });
+    else if (!v.eligible) out.push({ tone: 'fail', glyph: 'x', title: 'Calibration failed.', text: 'Cannot be approved.', href: 'checks', link: 'See matrix' });
+    else if (!data.approval) out.push({ tone: 'todo', glyph: 'approvals', title: `${data.draft.check?.id || 'Check'} is eligible.`, text: 'Needs approval.', href: 'approvals', link: 'Review and approve' });
+    if (data.approval && !report) out.push({ tone: 'todo', glyph: 'play', title: 'No run yet.', href: 'runs', link: 'Start a run' });
     if (report) {
-      if (data.report_stale === true) out.push({ tone: 'inc', glyph: 'clock', title: 'Report is stale.', text: 'Refs moved since this run.', href: 'runs', link: 'Rerun' });
-      realChecks(report).filter((c) => c.verdict === 'VIOLATION_INTRODUCED').forEach((c) => out.push({ tone: 'fail', glyph: 'x', title: `${c.decision?.id || c.check?.decision_id} regressed.`, text: `${c.check_id} fails on head ${report.head_ref}.`, href: 'runs', link: 'Inspect evidence' }));
-      realChecks(report).filter((c) => c.verdict === 'NOT_CHECKED').forEach((c) => out.push({ tone: 'inc', glyph: 'help', title: `${c.check_id} not checked.`, text: c.error || c.head?.error || c.base?.error || 'No result established.', href: 'runs', link: 'See reason' }));
+      if (data.report_stale === true) out.push({ tone: 'inc', glyph: 'clock', title: 'Report is stale.', href: 'runs', link: 'Rerun' });
+      realChecks(report).filter((c) => c.verdict === 'VIOLATION_INTRODUCED').forEach((c) => out.push({ tone: 'fail', glyph: 'x', title: `${c.decision?.id || c.check?.decision_id} regressed`, text: `on ${report.head_ref}.`, href: 'runs', link: 'Inspect evidence' }));
+      realChecks(report).filter((c) => c.verdict === 'NOT_CHECKED').forEach((c) => out.push({ tone: 'inc', glyph: 'help', title: `${c.check_id} not checked.`, text: c.error || c.head?.error || c.base?.error || '', href: 'runs', link: 'See reason' }));
       if (m.tone === 'inc' && !realChecks(report).some((c) => c.verdict === 'NOT_CHECKED')) out.push({ tone: 'inc', glyph: 'help', title: 'Run incomplete.', text: m.summary, href: 'runs', link: 'See warnings' });
       const approver = realChecks(report)[0]?.approver;
-      if (approver && !approver.verified) out.push({ tone: 'fail', glyph: 'user', title: 'Approver not verified.', text: approver.reason || '', href: 'approvals', link: 'See provenance' });
-      if (report.sandbox === 'host') out.push({ tone: 'inc', glyph: 'box', title: 'Head ran without isolation.', text: 'Sandbox mode was host.', href: 'reports', link: 'See report' });
+      if (approver && !approver.verified) out.push({ tone: 'fail', glyph: 'user', title: 'Approver not verified.', href: 'approvals', link: 'See provenance' });
+      if (report.sandbox === 'host') out.push({ tone: 'inc', glyph: 'box', title: 'Head ran without isolation.', href: 'reports', link: 'See report' });
     }
-    if (!out.length) out.push({ tone: 'ok', glyph: 'check', title: 'Nothing needs attention.', text: 'The latest run passed with a verified approver in an isolated sandbox.' });
+    if (!out.length) out.push({ tone: 'ok', glyph: 'check', title: 'Nothing needs attention.', text: 'Latest run passed, verified and isolated.' });
     return out;
   }
 
@@ -458,13 +474,14 @@
     safeText(byId('check-decision'), check ? `${check.decision_id}${check.supersedes ? ` (supersedes ${check.supersedes})` : ''}` : '—');
     safeText(byId('check-scenario'), check?.scenario, '—');
     safeText(byId('check-adapter'), check?.adapter || draft?.adapter_version, '—');
-    safeText(byId('check-rationale'), check?.rationale, 'Draft a proposal to inspect its scenario, assertions and decision citation.');
+    safeText(byId('check-rationale'), check?.rationale, 'Draft a proposal first.');
     assertionLines(byId('assertions'), check);
     const cites = byId('check-citation');
     cites.replaceChildren();
     const citations = Array.isArray(check?.citations) ? check.citations : [];
     if (!citations.length) cites.append(node('li', '', check ? 'No exact decision citation.' : 'No citation loaded.'));
     citations.forEach((c) => { const li = node('li', '', `“${c.quote}” `); li.append(node('code', '', c.decision_id)); cites.append(li); });
+    safeText(byId('citation-summary'), citations.length ? `Grounded in ${plural(citations.length, 'citation')}` : 'Grounded in');
 
     const body = byId('matrix-body');
     body.replaceChildren();
@@ -474,7 +491,7 @@
       const ok = obs?.status === f.expect;
       if (ok) matched += 1;
       const tr = node('tr');
-      const name = node('td'); name.append(node('div', '', f.name), node('div', 'mono small muted', short(v?.cases?.[f.key]?.sha || v?.calibration_hashes?.[f.key], 7)));
+      const name = node('td', '', f.name); name.title = v?.cases?.[f.key]?.sha || '';
       const exp = node('td', 'mono', f.expect === 'PASS' ? 'Pass' : 'Fail');
       const got = node('td', 'mono', obs?.status ? (obs.status === 'PASS' ? 'Pass' : obs.status === 'FAIL' ? 'Fail' : 'Error') : '—');
       const jobs = node('td', 'mono', Number.isInteger(obs?.unique_jobs) ? obs.unique_jobs : '—');
@@ -539,87 +556,106 @@
     visible(byId('stale-notice'), Boolean(report && stale));
     visible(byId('empty-run'), !report);
     visible(byId('run-content'), Boolean(report));
-    safeText(byId('run-cli'), report ? `ddg run --base ${report.base_ref} --head ${report.head_ref}` : 'ddg run --base <approved-ref> --head <candidate-ref>');
+    safeText(byId('run-cli'), report ? `ddg run --base ${report.base_ref} --head ${report.head_ref}` : 'ddg run --base <approved> --head <candidate>');
     if (!report) return;
 
-    const summary = byId('run-summary');
-    summary.className = `run-summary tone-${m.tone}`;
+    byId('run-summary').className = `run-summary tone-${m.tone}`;
     setResult(byId('run-result'), m);
     setExit(byId('run-exit'), m);
     safeText(byId('run-summary-text'), m.summary);
     safeText(byId('run-base-ref'), report.base_ref, 'base');
     safeText(byId('run-head-ref'), data.scenarios?.find((s) => s.id === scenarioId(report, data.scenarios || []))?.label || report.head_ref, 'head');
-    safeText(byId('run-base-sha'), report.base_sha);
-    safeText(byId('run-head-sha'), report.head_sha);
-    safeText(byId('run-sandbox'), report.sandbox === 'host' ? 'host (UNSAFE, no isolation)' : report.sandbox, 'not recorded');
+    shaText(byId('run-base-sha'), report.base_sha);
+    shaText(byId('run-head-sha'), report.head_sha);
+    const sb = byId('run-sandbox');
+    safeText(sb, report.sandbox === 'host' ? 'host · UNSAFE' : report.sandbox, 'not recorded');
+    setTone(sb, report.sandbox === 'host' ? 'fail' : report.sandbox ? null : 'inc');
 
     const checks = realChecks(report);
-    safeText(byId('results-count'), plural(checks.length, 'approved check'));
+    safeText(byId('results-count'), plural(checks.length, 'check'));
     if (!checks.some((c) => c.check_id === state.selected)) state.selected = (checks.find((c) => c.verdict !== 'CHECK_PASSED') || checks[0])?.check_id || null;
     const groups = byId('result-groups');
     groups.replaceChildren();
+    const zero = [];
     OUTCOMES.forEach((o) => {
       const members = checks.filter((c) => outcomeOf(c.verdict).verdict === o.verdict);
-      const g = node('div', `group g-${o.tone}${members.length ? '' : ' is-empty'}`);
+      if (!members.length) { zero.push(o.label.toLowerCase()); return; }
+      const g = node('div', `group g-${o.tone}`);
       const head = node('div', 'group-head');
-      head.append(icon(o.glyph), node('span', '', o.verdict), node('span', 'n', members.length));
+      const name = node('span', 'group-name'); name.append(enumLine(o.label, o.verdict));
+      head.append(icon(o.glyph), name, node('span', 'n', members.length));
       g.append(head, node('p', 'group-desc', o.desc));
       const rows = node('div', 'group-rows');
       members.forEach((c) => {
         const b = node('button', 'result-row');
         b.type = 'button';
         b.setAttribute('aria-pressed', String(c.check_id === state.selected));
-        b.append(node('span', 'rr-id', c.check_id), node('span', 'rr-dec', c.decision?.id || c.check?.decision_id || ''), node('span', 'rr-obs', `base ${obsText(c.base)}  →  head ${obsText(c.head)}`));
+        b.append(node('span', 'rr-id', c.check_id), node('span', 'rr-dec', c.decision?.id || c.check?.decision_id || ''), node('span', 'rr-obs', `base ${obsText(c.base)} → head ${obsText(c.head)}`));
         b.addEventListener('click', () => { state.selected = c.check_id; renderRuns(state.value); });
         rows.append(b);
       });
       g.append(rows);
       groups.append(g);
     });
-    if (!checks.length) groups.append(node('p', 'body-copy', 'No approved check produced a result for this run.'));
+    if (!checks.length) groups.append(node('p', 'body-copy', 'No approved check produced a result.'));
+    safeText(byId('results-zero'), zero.length && checks.length ? `None ${zero.join(' · ')}` : '', '');
 
     const warnBox = byId('run-warnings');
     const warnings = Array.isArray(report.warnings) ? report.warnings : [];
     visible(warnBox, warnings.length > 0);
     warnBox.replaceChildren(node('p', 'field-label', 'Warnings'));
-    warnings.forEach((w) => { const p = node('p', 'warning'); const t = node('span'); t.append(node('code', '', w?.code || 'WARNING'), document.createTextNode(w?.message ? ` ${w.message}` : w?.detail ? ` ${w.detail}` : '')); p.append(icon('alert'), t); warnBox.append(p); });
+    warnings.forEach((w) => { const p = node('p', 'warning'); const t = node('span'); t.append(node('code', '', w?.code || 'WARNING'), document.createTextNode(w?.message ? ` ${w.message}` : '')); p.append(icon('alert'), t); warnBox.append(p); });
 
     renderDetail(report, checks.find((c) => c.check_id === state.selected) || null);
   }
 
   function renderDetail(report, c) {
-    const o = c ? outcomeOf(c.verdict) : null;
-    tag(byId('detail-verdict'), c ? c.verdict : 'no check', o ? o.tone : 'muted', o ? o.glyph : null);
-    const reason = c && c.verdict === 'NOT_CHECKED' ? ` Reason: ${c.error || c.head?.error || c.base?.error || 'not recorded'}.` : '';
-    safeText(byId('detail-explain'), c ? `${VERDICT_TEXT[c.verdict] || 'Outcome not recognised; treated as not checked.'}${reason}` : 'Select a check result to inspect its evidence.');
+    safeText(byId('detail-check'), c?.check_id, 'No check');
+    if (c) outcomeTag(byId('detail-verdict'), c.verdict); else tag(byId('detail-verdict'), '—');
+    const reason = c && c.verdict === 'NOT_CHECKED' ? ` ${c.error || c.head?.error || c.base?.error || 'Reason not recorded.'}` : '';
+    safeText(byId('detail-explain'), c ? `${VERDICT_TEXT[c.verdict] || 'Unrecognised outcome; treated as not checked.'}${reason}` : 'Select a check result.');
     const decision = c?.decision || report.active_decisions?.find((d) => d.id === c?.check?.decision_id);
-    safeText(byId('detail-decision'), decision ? `${decision.id} · ${decision.rule}` : 'Governing decision not present in the report.');
-    safeText(byId('detail-check'), c?.check_id, '—');
-    safeText(byId('detail-digest'), short(c?.check_digest, 12));
-    assertionLines(byId('detail-assertions'), c?.check);
+    const dec = byId('detail-decision');
+    dec.replaceChildren();
+    if (decision) dec.append(node('span', 'mono dec-id', decision.id), document.createTextNode(` ${decision.rule}`));
+    else dec.textContent = 'Governing decision not in the report.';
     const field = byId('state-field');
     if (c) {
       drawColumns(field, [
         { label: 'Base', note: obsText(c.base), jobs: jobsOf(c.base), tone: statusTone(c.base) },
         { label: 'Head', note: obsText(c.head), jobs: jobsOf(c.head), tone: statusTone(c.head) }
-      ], { expected: expectedJobs(c.check), colW: 92, gap: 90, unit: 44 });
-      field.setAttribute('aria-label', `Jobs created for one operation. Base ${obsText(c.base)}. Head ${obsText(c.head)}.${Number.isInteger(expectedJobs(c.check)) ? ` The check expects ${plural(expectedJobs(c.check), 'job')}.` : ''}`);
+      ], { expected: expectedJobs(c.check), colW: 84, gap: 84, unit: 40 });
+      field.setAttribute('aria-label', `Jobs created for one operation. Base ${obsText(c.base)}. Head ${obsText(c.head)}.${Number.isInteger(expectedJobs(c.check)) ? ` Expected ${expectedJobs(c.check)}.` : ''}`);
     } else { field.replaceChildren(); }
+
+    // evidence on demand, each with a one-line summary so a collapsed section still says something
     const side = (id, obs) => { const el = byId(id); safeText(el, obsText(obs)); setTone(el, statusTone(obs)); };
     side('detail-base', c?.base); side('detail-head', c?.head);
     trace(byId('trace-base'), c?.base);
     trace(byId('trace-head'), c?.head);
+    const n = (obs) => (Array.isArray(obs?.events) ? obs.events.length : 0);
+    safeText(byId('ev-traces-meta'), c ? `base ${plural(n(c.base), 'event')} · head ${plural(n(c.head), 'event')}` : '—');
     const diff = typeof c?.diff === 'string' ? c.diff.trim() : '';
-    visible(byId('detail-diff-block'), Boolean(diff));
-    byId('detail-diff').textContent = diff;
+    byId('detail-diff').textContent = diff || 'No change to files in the check scope.';
+    const lines = diff.split('\n');
+    const add = lines.filter((l) => l.startsWith('+') && !l.startsWith('+++')).length;
+    const del = lines.filter((l) => l.startsWith('-') && !l.startsWith('---')).length;
+    safeText(byId('ev-diff-meta'), diff ? `+${add} −${del}` : 'no change in scope');
+    assertionLines(byId('detail-assertions'), c?.check);
+    safeText(byId('detail-digest'), c?.check_digest, '—');
+    safeText(byId('ev-check-meta'), c?.check ? plural((c.check.assertions || []).length, 'assertion') : '—');
     const ap = c?.approval; const who = c?.approver; const commit = who?.commits?.[0];
+    safeText(byId('ev-approval-meta'), who ? (who.verified ? `verified · ${commit?.author_email || 'git author'}` : 'NOT verified') : 'not reported');
+    setTone(byId('ev-approval-meta'), who ? (who.verified ? null : 'fail') : 'inc');
     safeText(byId('detail-approval'), c ? [
-      ap ? `Approved ${ap.approved_at || ''} with review label “${ap.reviewer}”.` : 'No approval record in the report.',
-      who ? (who.verified ? `Git author ${commit?.author_email || 'unknown'} verified against the allowlist (${SIGNATURE[commit?.signature] || 'signature not reported'}).` : `Approver NOT verified${who.reason ? `: ${who.reason}` : ''}.`) : 'Approver verification not reported.'
+      ap ? `Approved ${ap.approved_at || ''}, label “${ap.reviewer}”.` : 'No approval record in the report.',
+      who ? (who.verified ? `Author ${commit?.author_email || 'unknown'} is on the allowlist (${SIGNATURE[commit?.signature] || 'signature not reported'}).` : `Approver not verified${who.reason ? `: ${who.reason}` : ''}.`) : ''
     ].join(' ') : '—');
     const ord = report.ordinary_tests || {};
     safeText(byId('ordinary-base'), obsText(ord.base));
     safeText(byId('ordinary-head'), obsText(ord.head));
+    const both = ord.base?.status === 'PASS' && ord.head?.status === 'PASS';
+    safeText(byId('ev-ordinary-meta'), both ? 'both passed' : ord.base || ord.head ? 'see results' : 'not run');
   }
 
   // ---- approvals ----------------------------------------------------------------------------------------------
@@ -629,11 +665,11 @@
     const who = data.report ? first?.approver : null;
     const commit = who?.commits?.[0];
     const step = (n, cls, text) => { const li = byId(`flow-${n}`); li.className = `flow-step ${cls}`; safeText(byId(`flow-${n}-text`), text); };
-    step(1, draft ? 'is-done' : 'is-current', draft ? `${draft.check?.id} · draft ${short(draft.draft_digest, 8)}` : 'Draft a proposal in Check Studio.');
+    step(1, draft ? 'is-done' : 'is-current', draft ? `${draft.check?.id} · draft ${short(draft.draft_digest, 8)}` : 'Draft a proposal first.');
     const matched = FIXTURES.filter((f) => v?.cases?.[f.key]?.observation?.status === f.expect).length;
-    step(2, v ? (v.eligible ? 'is-done' : 'is-failed') : draft ? 'is-current' : '', v ? (v.eligible ? `${matched} of 3 fixtures matched` : `${matched} of 3 matched; approval unavailable`) : 'Calibration not run.');
-    step(3, ap ? 'is-done' : v?.eligible ? 'is-current' : '', ap ? `Recorded ${clock(ap.approved_at)} UTC · label “${ap.reviewer}”` : v?.eligible ? 'Approve the exact check below.' : 'Waiting for an eligible check.');
-    step(4, who?.verified ? 'is-done' : who ? 'is-failed' : ap ? 'is-current' : '', who?.verified ? `Verified · ${commit?.author_email}` : who ? `Unverifiable${who.reason ? `: ${who.reason}` : ''}` : ap ? 'Verified when the next run reads the approval commit.' : 'Nothing committed yet.');
+    step(2, v ? (v.eligible ? 'is-done' : 'is-failed') : draft ? 'is-current' : '', v ? (v.eligible ? `${matched} of 3 fixtures matched` : `${matched} of 3 matched · blocked`) : 'Not calibrated.');
+    step(3, ap ? 'is-done' : v?.eligible ? 'is-current' : '', ap ? `Recorded ${clock(ap.approved_at)} UTC` : v?.eligible ? 'Approve below.' : 'Waiting.');
+    step(4, who?.verified ? 'is-done' : who ? 'is-failed' : ap ? 'is-current' : '', who?.verified ? `Verified · ${commit?.author_email}` : who ? `Unverifiable${who.reason ? `: ${who.reason}` : ''}` : ap ? 'Verified at next run.' : 'Waiting.');
 
     tag(byId('approval-state'), who?.verified ? 'Verified' : who ? 'Unverifiable' : ap ? 'Recorded · awaiting verification' : v?.eligible ? 'Pending' : 'Not eligible yet',
       who?.verified ? 'pass' : who ? 'fail' : ap ? 'pre' : 'muted', who?.verified ? 'check' : who ? 'x' : ap ? 'clock' : null);
@@ -649,7 +685,7 @@
       safeText(byId('rec-vdigest'), ap.validation_digest);
     }
     tag(byId('git-state'), who?.verified ? 'Verified' : who ? 'Unverifiable' : 'Not yet verified', who?.verified ? 'pass' : who ? 'fail' : 'muted', who?.verified ? 'check' : who ? 'x' : null);
-    safeText(byId('rec-author'), who ? `${commit?.author_email || 'unknown'}${who.verified ? ' · on allowlist' : ''}` : null, 'verified when a run reads the approval commit');
+    safeText(byId('rec-author'), who ? `${commit?.author_email || 'unknown'}${who.verified ? ' · on allowlist' : ''}` : null, 'verified at next run');
     safeText(byId('rec-commit'), commit?.commit, '—');
     safeText(byId('rec-signature'), commit ? `${SIGNATURE[commit.signature] || commit.signature}${commit.signer ? ` · ${commit.signer}` : ''}` : null, '—');
     safeText(byId('rec-require'), who ? (who.require_signed ? 'yes' : 'no (allowlist only)') : null, '—');
@@ -666,10 +702,10 @@
     if (!report) return;
     const m = overall(report, stale);
     tag(byId('rep-fresh'), stale ? 'Stale' : 'Current', stale ? 'inc' : 'pass', stale ? 'clock' : 'check');
-    tag(byId('rep-result'), `${report.aggregate} · exit ${m.exit}`, m.tone, m.glyph);
+    tag(byId('rep-result'), `${m.word} · exit ${m.exit}`, m.tone, m.glyph); byId('rep-result').title = report.aggregate || '';
     const meta = byId('rep-meta');
     meta.replaceChildren();
-    [['Overall', `${report.aggregate || 'unknown'} (exit ${m.exit})`], ['Run at', report.run_at], ['Base', `${report.base_ref} @ ${report.base_sha}`], ['Head', `${report.head_ref} @ ${report.head_sha}`],
+    [['Overall', `${m.word} · ${report.aggregate || 'unknown'} · exit ${m.exit}`], ['Run at', report.run_at], ['Base', `${report.base_ref} @ ${report.base_sha}`], ['Head', `${report.head_ref} @ ${report.head_sha}`],
       ['Adapter', report.adapter_version], ['Isolation', report.sandbox === 'host' ? 'host (UNSAFE)' : report.sandbox], ['Checks evaluated', realChecks(report).length]].forEach(([k, val]) => {
       const row = node('div'); row.append(node('dt', '', k), node('dd', 'mono', val ?? 'not recorded')); meta.append(row);
     });
@@ -677,8 +713,8 @@
     rows.replaceChildren();
     realChecks(report).forEach((c) => {
       const tr = node('tr');
-      const o = outcomeOf(c.verdict); const t = node('span'); tag(t, c.verdict, o.tone, o.glyph);
-      const out = node('td'); out.append(t);
+      const t = node('span'); outcomeTag(t, c.verdict);
+      const out = node('td'); out.append(t, node('div', 'enum', c.verdict));
       tr.append(node('td', 'mono', c.check_id), node('td', 'mono', c.decision?.id || c.check?.decision_id || '—'), node('td', 'mono', obsText(c.base)), node('td', 'mono', obsText(c.head)), out);
       rows.append(tr);
     });
