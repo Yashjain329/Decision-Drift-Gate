@@ -31,3 +31,13 @@ Phase 04 independently verified actual browser proposal/calibration/approval/exe
 - Real Gemini proposal capture and rebuilt-history replay succeeded; see [evidence](../../evidence/README.md). Credentials remain in the ignored local `.env` and are excluded from source/reports.
 - Human reviewers and a presenter are needed for evaluation and rehearsal. No participant feedback or speaking time has been collected.
 - GitHub `origin/master` was published and verified. Fresh clone of `8d5ca14895bd05b638ee37614cf35c7c989b9533` reproduced the documented CLI lifecycle, server startup/assets and all 15 acceptance cases without provider credentials. The final documentation update preserves identical implementation files.
+
+## Addendum 12 October 2026: productization
+
+The table above records the 4 October prototype and is unchanged. Three statements in it no longer describe the code:
+
+- Test count: the suite is now **144 tests** (`python -m unittest discover -s tests`, run on commit `bbb0e33`: `Ran 144 tests in 399.768s`, `OK`). The earlier figures (34, 70, 96, 110) were correct at their commits.
+- Isolation: the prototype ran code under test in a host subprocess. Since `bbb0e33` workers run in a Docker or Podman container by default (`ddg/sandbox.py`). See [threat model](../THREAT_MODEL.md).
+- Approval identity: the prototype trusted a typed reviewer name. Since `bbb0e33` the Git author of the approval commit is checked against `.ddg/approvers.json` at base (`ddg/identity.py`). Bundles that fail become INCOMPLETE; see [UPGRADING](../UPGRADING.md).
+
+Productization phases P1 to P3 are done in the code. P4 to P7 are in progress as a batch run; see [the plan](../PRODUCTIZATION_PLAN.md). The human evaluation, timed rehearsals and video listed above as pending are still pending.
