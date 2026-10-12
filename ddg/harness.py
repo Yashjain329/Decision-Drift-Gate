@@ -164,7 +164,7 @@ _DENIED_MODULES = {
     "os", "sys", "subprocess", "socket", "ctypes", "shutil", "pathlib", "io", "gc",
     "inspect", "multiprocessing", "signal", "tempfile", "urllib", "http", "ftplib",
     "smtplib", "webbrowser", "pickle", "marshal", "code", "codeop", "pty", "posix",
-    "nt", "_thread", "builtins",
+    "nt", "_thread", "builtins", "_io", "_socket", "_winapi", "_posixsubprocess", "_ctypes",
 }
 _DENIED_CALLS = {"__import__", "eval", "exec", "compile", "open", "globals", "vars"}
 

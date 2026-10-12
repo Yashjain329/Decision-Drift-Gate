@@ -109,10 +109,12 @@ def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
                 box["line"] = ""
 
         thread = threading.Thread(target=talk, daemon=True)
-        thread.start()
-        thread.join(float(timeout))
-        timed_out = thread.is_alive()
-        sandbox.reap(proc, runtime, name)
+        try:
+            thread.start()
+            thread.join(float(timeout))
+            timed_out = thread.is_alive()
+        finally:
+            sandbox.reap(proc, runtime, name)  # always remove the container, even if the parent raises
         thread.join(2)
     if timed_out:
         return _error("Target execution timed out")
