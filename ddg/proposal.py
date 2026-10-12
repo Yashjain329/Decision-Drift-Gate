@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import adapters
 from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
 from .gitio import list_at, read_at, resolve_commit
 
@@ -44,7 +45,8 @@ def _records(repo: Path, revision: str) -> list[dict]:
     return records
 
 
-def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None = None) -> dict:
+def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None = None,
+                 adapter: str = ADAPTER_VERSION) -> dict:
     """Load the active decision and corrected source from one pinned commit."""
     source_sha = resolve_commit(Path(repo), revision or "HEAD")
     decisions = validate_decisions(_records(Path(repo), source_sha))
@@ -54,17 +56,21 @@ def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None 
     previous_id = decision["supersedes"]
     if previous_id is None or previous_id not in decisions:
         raise ValueError("Active decision has no recorded predecessor")
-    try:
-        source = read_at(Path(repo), source_sha, "src/job_client.py")
-    except ValueError as exc:
-        raise ValueError("Pinned corrected source is unavailable") from exc
+    if adapter == ADAPTER_VERSION:
+        try:
+            source = read_at(Path(repo), source_sha, "src/job_client.py")
+        except ValueError as exc:
+            raise ValueError("Pinned corrected source is unavailable") from exc
+    else:
+        adapters.get(adapter)  # validates the name; generic adapters carry no fixed source file
+        source = ""
     return {
         "source_sha": source_sha,
         "old_decision": decisions[previous_id],
         "new_decision": decision,
         "decisions": decisions,
         "source": source,
-        "adapter_version": ADAPTER_VERSION,
+        "adapter_version": adapter,
         "prompt_version": PROMPT_VERSION,
         "vocabulary": copy.deepcopy(VOCABULARY),
     }
@@ -149,7 +155,7 @@ def wrap_draft(context: dict, check: dict, mode: str = "manual", model: str | No
     normalized = validate_citations(check, _proposal_decisions(context))
     if mode not in {"live", "recorded", "manual"}:
         raise ValueError("Unknown proposal mode")
-    if context.get("adapter_version") != ADAPTER_VERSION:
+    if context.get("adapter_version") not in adapters.names():
         raise ValueError("Proposal context names an unsupported adapter")
     source_sha = context.get("source_sha")
     if not isinstance(source_sha, str) or len(source_sha) != 40 or any(c not in "0123456789abcdefABCDEF" for c in source_sha):
@@ -323,6 +329,8 @@ def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
     if mode != "live":
         raise ValueError("Unknown proposal mode")
 
+    if context.get("adapter_version") != ADAPTER_VERSION:
+        raise ValueError("AI proposals support only " + ADAPTER_VERSION + "; supply a manual check for other adapters")
     _load_env_file(Path(context["env_file"]) if context.get("env_file") else None)
     model = os.environ.get("DDG_GEMINI_MODEL", "").strip()
     if not model:

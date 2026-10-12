@@ -14,7 +14,6 @@ _TOP_LEVEL = {
     "schema_version", "id", "decision_id", "supersedes", "adapter",
     "scenario", "assertions", "rationale", "citations",
 }
-_SCENARIOS = {"commit_then_503", "reject_then_503"}
 _ID = re.compile(r"^(CHK|DEC)-[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
@@ -84,33 +83,9 @@ def validate_check(value: dict) -> dict:
     _record_id(value["id"], "CHK", "id")
     _record_id(value["decision_id"], "DEC", "decision_id")
     _record_id(value["supersedes"], "DEC", "supersedes")
-    if not isinstance(value["adapter"], str) or value["adapter"] != ADAPTER_VERSION:
-        raise ValueError("Unsupported adapter")
-    if not isinstance(value["scenario"], str) or value["scenario"] not in _SCENARIOS:
-        raise ValueError("Unsupported scenario")
+    from . import adapters  # local import: adapters depend on this module's helpers
+    adapters.get(value["adapter"]).validate_body(value)
     _nonblank(value["rationale"], "rationale")
-
-    assertions = value["assertions"]
-    if not isinstance(assertions, list) or len(assertions) != 2:
-        raise ValueError("assertions must contain exactly two metrics")
-    by_metric: dict[str, Any] = {}
-    for assertion in assertions:
-        if not isinstance(assertion, dict) or set(assertion) != {"metric", "equals"}:
-            raise ValueError("Each assertion must contain only metric and equals")
-        metric = assertion["metric"]
-        if not isinstance(metric, str) or metric not in {"unique_jobs", "returned_job_exists"}:
-            raise ValueError("Unsupported assertion metric")
-        if metric in by_metric:
-            raise ValueError("Assertion metrics must be distinct")
-        expected = assertion["equals"]
-        if metric == "unique_jobs":
-            if isinstance(expected, bool) or not isinstance(expected, int) or expected not in (0, 1, 2):
-                raise ValueError("unique_jobs equals must be integer 0, 1, or 2")
-        elif not isinstance(expected, bool):
-            raise ValueError("returned_job_exists equals must be boolean")
-        by_metric[metric] = expected
-    if set(by_metric) != {"unique_jobs", "returned_job_exists"}:
-        raise ValueError("Both required assertion metrics must be present")
 
     citations = value["citations"]
     if not isinstance(citations, list) or not citations:

@@ -10,10 +10,10 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import adapters
 from .contracts import ADAPTER_VERSION, canonical_bytes, digest, validate_check
 from .demo import activate_demo
 from .gitio import resolve_commit
-from .harness import observe
 from .proposal import input_digest, load_context, validate_citations
 
 _SHA1 = re.compile(r"^[0-9a-f]{40}$")
@@ -102,7 +102,7 @@ def _check_draft(repo: Path, draft: dict) -> tuple[dict, dict]:
         raise ValueError("Draft source revision must be a full SHA-1 commit id")
     if not isinstance(draft["proposal_mode"], str) or draft["proposal_mode"] not in {"live", "recorded", "manual"}:
         raise ValueError("Draft proposal mode is invalid")
-    if draft["adapter_version"] != ADAPTER_VERSION:
+    if draft["adapter_version"] != check["adapter"]:
         raise ValueError("Draft adapter version is unsupported")
     if draft["capture_source_sha"] is not None and not _is_sha(draft["capture_source_sha"]):
         raise ValueError("Draft capture source revision is invalid")
@@ -121,7 +121,8 @@ def _check_draft(repo: Path, draft: dict) -> tuple[dict, dict]:
     source_sha = resolve_commit(repo, draft["source_sha"])
     if source_sha != draft["source_sha"]:
         raise ValueError("Draft source revision is not canonical")
-    context = load_context(repo, decision_id=draft["decision"].get("id") if isinstance(draft["decision"], dict) else "", revision=source_sha)
+    context = load_context(repo, decision_id=draft["decision"].get("id") if isinstance(draft["decision"], dict) else "", revision=source_sha,
+                           adapter=check["adapter"])
     if draft["decision"] != context["new_decision"]:
         raise ValueError("Draft decision differs from its pinned repository record")
     if draft["source_sha"] != context["source_sha"] or draft["adapter_version"] != context["adapter_version"]:
@@ -139,38 +140,7 @@ def _check_draft(repo: Path, draft: dict) -> tuple[dict, dict]:
 
 
 def _expected_case(case: str, observation: dict, check: dict) -> bool:
-    if not isinstance(observation, dict) or set(observation) != _OBSERVATION_FIELDS:
-        return False
-    if not isinstance(observation["status"], str) or observation["status"] not in {"PASS", "FAIL"} or observation["error"] is not None:
-        return False
-    if (isinstance(observation["unique_jobs"], bool) or not isinstance(observation["unique_jobs"], int)
-            or observation["unique_jobs"] < 0
-            or not isinstance(observation["returned_job_exists"], bool)
-            or isinstance(observation["submit_calls"], bool) or not isinstance(observation["submit_calls"], int)
-            or observation["submit_calls"] < 0
-            or (observation["returned_job_id"] is not None and not isinstance(observation["returned_job_id"], str))
-            or not isinstance(observation["events"], list)
-            or any(not isinstance(event, dict) for event in observation["events"])):
-        return False
-    if any(event.get("event") == "accepted" and not isinstance(event.get("job_id"), str)
-           for event in observation["events"]):
-        return False
-    accepted = [event.get("job_id") for event in observation["events"]
-                if isinstance(event, dict) and event.get("event") == "accepted"]
-    submitted = [event for event in observation["events"]
-                 if isinstance(event, dict) and event.get("event") == "submit"]
-    if (len(set(accepted)) != observation["unique_jobs"]
-            or len(submitted) != observation["submit_calls"]
-            or observation["returned_job_exists"] != (observation["returned_job_id"] in accepted)):
-        return False
-    complete = observation["returned_job_exists"] and isinstance(observation["returned_job_id"], str)
-    assertions_pass = all(observation.get(item["metric"]) == item["equals"] for item in check["assertions"])
-    expected_status = "PASS" if complete and assertions_pass else "FAIL"
-    if observation["status"] != expected_status:
-        return False
-    if case == "bad":
-        return observation["status"] == "FAIL" and observation["unique_jobs"] == 2
-    return observation["status"] == "PASS" and observation["unique_jobs"] == 1 and complete
+    return adapters.get(check["adapter"]).expected_case(case, observation, check)
 
 
 def _calibration(repo: Path, check: dict, refs: dict) -> tuple[dict, dict, bool]:
@@ -184,7 +154,7 @@ def _calibration(repo: Path, check: dict, refs: dict) -> tuple[dict, dict, bool]
         sha = resolve_commit(repo, sha)
         hashes[case] = sha
         try:
-            observation = observe(repo, sha, check)
+            observation = adapters.get(check["adapter"]).observe(repo, sha, check, 10)
         except Exception as exc:
             observation = {
                 "status": "ERROR", "unique_jobs": None, "returned_job_exists": None,
@@ -258,7 +228,7 @@ def _verify_validation(check: dict, decision: dict, validation: dict) -> bool:
         if (type(validation["schema_version"]) is not int or validation["schema_version"] != 1
                 or validation["check_id"] != check["id"] or validation["draft_digest"] != validation["proposal"]["draft_digest"]
                 or validation["check_digest"] != digest(check) or validation["decision_digest"] != digest(decision)
-                or validation["adapter_version"] != check["adapter"] or validation["adapter_version"] != ADAPTER_VERSION
+                or validation["adapter_version"] != check["adapter"]
                 or not isinstance(validation["input_digest"], str) or not re.fullmatch(r"[0-9a-f]{64}", validation["input_digest"])
                 or not _is_sha(validation["source_sha"])
                 or validation["eligible"] is not True or not _valid_iso_time(validation["validated_at"])):
@@ -299,7 +269,7 @@ def verify_bundle(check: dict, decision: dict, validation: dict, approval: dict)
             return False
         if (type(approval["schema_version"]) is not int or approval["schema_version"] != 1
                 or approval["check_id"] != check["id"]
-                or approval["bundle_digest"] != bundle_digest(check, decision, ADAPTER_VERSION, validation)
+                or approval["bundle_digest"] != bundle_digest(check, decision, check["adapter"], validation)
                 or approval["validation_digest"] != digest(validation)
                 or approval["calibration_hashes"] != validation["calibration_hashes"]
                 or not isinstance(approval["reviewer"], str) or not approval["reviewer"].strip()
@@ -402,7 +372,7 @@ def approve(repo: Path, draft: dict, validation: dict, reviewer: str, reason: st
     approval = {
         "schema_version": 1,
         "check_id": check["id"],
-        "bundle_digest": bundle_digest(check, decision, ADAPTER_VERSION, validation),
+        "bundle_digest": bundle_digest(check, decision, check["adapter"], validation),
         "reviewer": reviewer.strip(),
         "reason": reason.strip(),
         "approved_at": _now(),

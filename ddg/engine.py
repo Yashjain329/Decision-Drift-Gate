@@ -7,13 +7,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import adapters, identity, sandbox
 from .approval import verify_bundle
 from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
 from .gitio import changed_paths_at, diff_at, list_at, read_at, resolve_commit
-from .harness import observe, observe_happy_path
+from .harness import observe_happy_path
 from .proposal import validate_citations
 
 RUNNER_TIMEOUT_SECONDS = 10.0
+_DEFAULT_SOURCE = "src/job_client.py"
 _VERDICTS = {
     ("PASS", "FAIL"): "VIOLATION_INTRODUCED",
     ("FAIL", "FAIL"): "PRE_EXISTING_FAILURE",
@@ -163,6 +165,11 @@ def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[di
                 raise ValueError("Approved check is missing its validation or approval record")
             if not verify_bundle(check, decision, validation, approval):
                 raise ValueError("Approved check bundle digest or calibration evidence is invalid")
+            try:
+                approver = identity.verify_approver(repo, base_sha, check_id)
+            except identity.IdentityError as exc:
+                warnings.append(_warning("APPROVER_NOT_VERIFIED", f"{check_id}: {exc}"))
+                raise ValueError(f"Approver identity not verified: {exc}") from exc
             entry = {
                 "check_id": check_id,
                 "verdict": "NOT_CHECKED",
@@ -175,6 +182,7 @@ def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[di
                 "validation": validation,
                 "diff": "",
                 "error": None,
+                "approver": approver,
                 "_authorized": True,
             }
             entries.append(entry)
@@ -216,6 +224,13 @@ def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[di
     return entries, incomplete, decision_evidence
 
 
+def _sandbox_mode() -> str:
+    try:
+        return sandbox.resolve()
+    except sandbox.SandboxUnavailable:
+        return "unavailable"
+
+
 def compare(repo: Path, base: str, head: str) -> dict:
     """Compare two pinned revisions using only base's validated approved checks."""
     repo = Path(repo).expanduser().resolve()
@@ -248,6 +263,20 @@ def compare(repo: Path, base: str, head: str) -> dict:
         entries = []
         active_decisions = []
         warnings.append(_warning("AUTHORITY_UNAVAILABLE", f"Could not load base policy artifacts: {type(exc).__name__}"))
+    diffs = {_DEFAULT_SOURCE: changed_lines}
+
+    def diff_for(path: str) -> str:
+        nonlocal diff_unavailable
+        if path not in diffs:
+            try:
+                diffs[path] = diff_at(repo, base_sha, head_sha, path)
+            except (ValueError, OSError, UnicodeError) as exc:
+                diffs[path] = ""
+                diff_unavailable = True
+                warnings.append(_warning("DIFF_UNAVAILABLE", f"Could not read source diff: {type(exc).__name__}"))
+        return diffs[path]
+
+    in_play: set[str] = set()
     for entry in entries:
         authorized = entry.pop("_authorized", False)
         check = entry.get("check")
@@ -255,22 +284,27 @@ def compare(repo: Path, base: str, head: str) -> dict:
             entry["diff"] = changed_lines
             continue
         try:
-            entry["base"] = observe(repo, base_sha, check, timeout=RUNNER_TIMEOUT_SECONDS)
+            adapter = adapters.get(check["adapter"])
+            in_play.add(adapter.NAME)
+            entry["base"] = adapter.observe(repo, base_sha, check, RUNNER_TIMEOUT_SECONDS)
         except Exception as exc:
             entry["base"] = _observation_error(f"Base execution failed: {type(exc).__name__}")
         try:
-            entry["head"] = observe(repo, head_sha, check, timeout=RUNNER_TIMEOUT_SECONDS)
+            entry["head"] = adapters.get(check["adapter"]).observe(repo, head_sha, check, RUNNER_TIMEOUT_SECONDS)
         except Exception as exc:
             entry["head"] = _observation_error(f"Head execution failed: {type(exc).__name__}")
         entry["verdict"] = _verdict(entry["base"], entry["head"])
-        entry["diff"] = changed_lines
+        entry["diff"] = diff_for(adapters.get(check["adapter"]).source_path(check))
         if entry["verdict"] == "NOT_CHECKED":
             warnings.append(_warning("EXECUTION_ERROR", f"{entry['check_id']} could not be evaluated on both revisions."))
 
-    ordinary_tests = {
-        "base": observe_happy_path(repo, base_sha, timeout=RUNNER_TIMEOUT_SECONDS),
-        "head": observe_happy_path(repo, head_sha, timeout=RUNNER_TIMEOUT_SECONDS),
-    }
+    # The ordinary-test observation is defined only for the job adapter; with no authority it still runs.
+    ordinary_tests = {}
+    if not in_play or ADAPTER_VERSION in in_play:
+        ordinary_tests = {
+            "base": observe_happy_path(repo, base_sha, timeout=RUNNER_TIMEOUT_SECONDS),
+            "head": observe_happy_path(repo, head_sha, timeout=RUNNER_TIMEOUT_SECONDS),
+        }
     ordinary_error = any(item["status"] == "ERROR" for item in ordinary_tests.values())
     if ordinary_error:
         warnings.append(_warning("ORDINARY_TEST_ERROR", "The no-fault submission observation errored on at least one revision."))
@@ -293,8 +327,9 @@ def compare(repo: Path, base: str, head: str) -> dict:
         "active_decisions": active_decisions,
         "warnings": warnings,
         "run_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "adapter_version": ADAPTER_VERSION,
+        "adapter_version": ",".join(sorted(in_play)) or ADAPTER_VERSION,
         "ordinary_tests": ordinary_tests,
+        "sandbox": _sandbox_mode(),
     }
 
 

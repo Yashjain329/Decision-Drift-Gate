@@ -70,11 +70,11 @@ def list_at(repo: Path, sha: str, prefix: str) -> list[str]:
     return sorted(paths)
 
 
-def diff_at(repo: Path, base_sha: str, head_sha: str) -> str:
+def diff_at(repo: Path, base_sha: str, head_sha: str, path: str = "src/job_client.py") -> str:
     """Return source-code context between two full commit ids."""
     base = _require_sha(base_sha)
     head = _require_sha(head_sha)
-    return _git(Path(repo), "diff", "--unified=3", base, head, "--", "src/job_client.py")
+    return _git(Path(repo), "diff", "--unified=3", base, head, "--", _require_path(path))
 
 
 def changed_paths_at(repo: Path, base_sha: str, head_sha: str) -> list[str]:
@@ -83,3 +83,23 @@ def changed_paths_at(repo: Path, base_sha: str, head_sha: str) -> list[str]:
     head = _require_sha(head_sha)
     output = _git(Path(repo), "-c", "core.quotePath=false", "diff", "--name-only", "--no-renames", base, head, "--")
     return [path for path in output.splitlines() if path]
+
+
+def commits_touching(repo: Path, sha: str, path: str) -> list[str]:
+    """Every commit reachable from sha that changed path (newest first)."""
+    commit = _require_sha(sha)
+    safe_path = _require_path(path)
+    out = _git(Path(repo), "log", "--format=%H", "--no-renames", commit, "--", safe_path)
+    return [line for line in out.split() if _FULL_SHA.fullmatch(line)]
+
+
+def commit_identity(repo: Path, commit: str) -> dict:
+    """Author email, signature status code and signer of one commit, plus the paths it changed."""
+    sha = _require_sha(commit)
+    meta = _git(Path(repo), "show", "-s", "--format=%ae%x00%G?%x00%GS", sha).rstrip("\n").split("\x00")
+    if len(meta) != 3:
+        raise ValueError("Unexpected commit metadata")
+    paths = _git(Path(repo), "-c", "core.quotePath=false", "diff-tree", "--root", "--no-commit-id",
+                 "--name-only", "-r", "--no-renames", sha).splitlines()
+    return {"author_email": meta[0].strip().lower(), "signature": meta[1], "signer": meta[2],
+            "paths": [p for p in paths if p]}

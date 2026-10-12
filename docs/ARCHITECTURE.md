@@ -31,7 +31,7 @@ Proposal provenance records mode, model, capture time and source revision separa
 
 The first adapter runs trusted synthetic `src/job_client.py` with `submit_job(service, payload, operation_id)`. The fake service can create a job before returning 503, or reject it before creating one. Checks observe unique jobs and whether the returned ID actually exists. Completion is mandatory: avoiding duplicates by abandoning the operation does not pass.
 
-Each revision executes in a fresh subprocess with a fresh service and a timeout. Unsupported source, missing entrypoints, crashes and malformed child output are errors. Model credentials are excluded from child environments. This is process separation for the demo, not a sandbox for arbitrary repositories.
+Each revision executes in a fresh subprocess with a fresh service and a timeout. Unsupported source, missing entrypoints, crashes and malformed child output are errors. Model credentials are excluded from child environments. The fake service and all recorded events live in the runner process; the child reaches it only through a JSON-line proxy, so the revision under test cannot edit the evidence (regression-tested). A static screen rejects filesystem, process and network modules and `open`/`eval`/`exec`. This is best-effort process separation for the demo, not an OS sandbox: run untrusted repositories in a container or restricted account.
 
 ## Result semantics
 

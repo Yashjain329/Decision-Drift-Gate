@@ -227,6 +227,8 @@ def build_demo(destination: Path) -> dict:
 
     _run(destination, "init", "--quiet", "--object-format=sha1")
     _write(destination, ".gitignore", ".ddg-demo.json\n")
+    _write(destination, ".ddg/approvers.json", _json_bytes({
+        "schema_version": 1, "require_signed": False, "approvers": ["ddg-demo@example.invalid"]}))
     _write(destination, ".ddg/decisions/DEC-001.json", _json_bytes({**_DECISION_1, "status": "active"}))
     _write(destination, "src/job_client.py", _BAD)
     first = _commit(destination, "Initial retry policy and client")

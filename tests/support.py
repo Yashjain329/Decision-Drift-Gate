@@ -41,7 +41,8 @@ def make_approved_demo(destination: Path) -> dict:
             "validation": validation}
 
 
-def commit_fixture(repo: Path, parent: str, files: dict[str, str | None], message: str) -> str:
+def commit_fixture(repo: Path, parent: str, files: dict[str, str | None], message: str,
+                   email: str = "ddg-test@example.invalid") -> str:
     """Commit a test-only variant without touching any source checkout."""
     repo = Path(repo).resolve()
     subprocess.run(["git", "-C", str(repo), "checkout", "--quiet", "--detach", parent],
@@ -59,6 +60,6 @@ def commit_fixture(repo: Path, parent: str, files: dict[str, str | None], messag
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True, capture_output=True,
                    text=True, encoding="utf-8")
     subprocess.run(["git", "-C", str(repo), "-c", "user.name=DDG Test", "-c",
-                    "user.email=ddg-test@example.invalid", "commit", "--quiet", "-m", message],
+                    f"user.email={email}", "commit", "--quiet", "-m", message],
                    check=True, capture_output=True, text=True, encoding="utf-8")
     return resolve_commit(repo, "HEAD")

@@ -1,86 +1,89 @@
-"""One-shot subprocess entry point for the trusted synthetic job adapter."""
+"""One-shot subprocess entry point for the synthetic job adapter.
+
+The fake service and every recorded observation live in the parent process.
+This worker only imports the revision under test and forwards its service
+calls as JSON lines over stdin/stdout, so the code under test cannot edit the
+evidence that is judged.
+"""
 
 from __future__ import annotations
 
-import contextlib
 import importlib.util
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 
-def _response(status: str, events: list[dict], *, jobs: int | None = None,
-              returned_id: str | None = None, exists: bool | None = None,
-              calls: int | None = None, error: str | None = None) -> dict:
-    return {
-        "status": status,
-        "unique_jobs": jobs,
-        "returned_job_exists": exists,
-        "returned_job_id": returned_id,
-        "submit_calls": calls,
-        "events": events,
-        "error": error,
-    }
+@dataclass(frozen=True)
+class _Response:
+    status: int
+    job_id: str | None
 
 
-def run(module_path: Path, request: dict) -> dict:
-    # This script is launched by absolute path, so add only the trusted source
-    # root needed to import the runner's own FakeService implementation.
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from ddg.harness import FakeService  # noqa: PLC0415
+class _ServiceProxy:
+    """The only service surface the code under test can reach."""
 
-    service = FakeService(request.get("scenario"))
+    def __init__(self, send, receive) -> None:
+        self._send = send
+        self._receive = receive
+
+    def create(self, payload, operation_id, idempotency_key=None):
+        reply = self._rpc({"op": "create", "payload": payload,
+                           "operation_id": operation_id, "idempotency_key": idempotency_key})
+        return _Response(reply["status"], reply["job_id"])
+
+    def lookup(self, operation_id):
+        return self._rpc({"op": "lookup", "operation_id": operation_id})["job_id"]
+
+    def _rpc(self, message: dict) -> dict:
+        self._send(message)
+        return self._receive()
+
+
+def run(module_path: Path, send, receive) -> None:
+    """Load the target, call submit_job, and report only its return value."""
+    service = _ServiceProxy(send, receive)
     try:
-        with contextlib.redirect_stdout(sys.stderr):
-            spec = importlib.util.spec_from_file_location("ddg_target_job_client", module_path)
-            if spec is None or spec.loader is None:
-                raise ImportError("Target module could not be loaded")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            submit_job = getattr(module, "submit_job", None)
-            if not callable(submit_job):
-                raise AttributeError("Target module has no callable submit_job entrypoint")
-            returned = submit_job(service, {"task": "synthetic"}, "operation-001")
-        returned_id = returned if isinstance(returned, str) else None
-        exists = returned_id is not None and any(job["job_id"] == returned_id for job in service.jobs)
-        result = {
-            "status": "PASS",
-            "unique_jobs": len(service.jobs),
-            "returned_job_exists": exists,
-            "returned_job_id": returned_id,
-            "submit_calls": service._create_calls,
-            "events": service.events,
-            "error": None,
-        }
-        return result
+        spec = importlib.util.spec_from_file_location("ddg_target_job_client", module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError("Target module could not be loaded")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        submit_job = getattr(module, "submit_job", None)
+        if not callable(submit_job):
+            raise AttributeError("Target module has no callable submit_job entrypoint")
+        returned = submit_job(service, {"task": "synthetic"}, "operation-001")
+        send({"op": "done", "returned": returned if isinstance(returned, str) else None})
     except BaseException as exc:
-        # Avoid traceback text and module stdout contaminating the JSON protocol.
-        # The exception class and message are useful diagnostics and contain no
-        # parent process environment values.
-        return _response("ERROR", service.events, error=f"{type(exc).__name__}: {exc}")
+        send({"op": "error", "error": f"{type(exc).__name__}: {exc}"})
 
 
 def main() -> int:
-    for stream in (sys.stdin, sys.stdout):
-        reconfigure = getattr(stream, "reconfigure", None)
-        if callable(reconfigure):
-            try:
-                reconfigure(encoding="utf-8", errors="strict")
-            except (AttributeError, OSError, ValueError):
-                # StringIO-like streams used by embedders may not support a
-                # codec change; the real subprocess streams do.
-                pass
-    try:
-        if len(sys.argv) != 2:
-            raise ValueError("worker expects exactly one snapshot path")
-        request = json.load(sys.stdin)
-        if not isinstance(request, dict):
-            raise ValueError("worker request must be an object")
-        result = run(Path(sys.argv[1]), request)
-    except BaseException as exc:
-        result = _response("ERROR", [], error=f"{type(exc).__name__}: {exc}")
-    sys.stdout.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
-    sys.stdout.write("\n")
+    protocol_out = sys.stdout
+    protocol_in = sys.stdin
+    for stream in (protocol_in, protocol_out):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="strict")
+        except (AttributeError, OSError, ValueError):
+            pass
+    # Stray prints from the target must not be mistaken for protocol messages.
+    sys.stdout = sys.stderr
+
+    def send(message: dict) -> None:
+        protocol_out.write(json.dumps(message, ensure_ascii=False, separators=(",", ":")) + "\n")
+        protocol_out.flush()
+
+    def receive() -> dict:
+        line = protocol_in.readline()
+        if not line:
+            raise EOFError("Runner closed the connection")
+        return json.loads(line)
+
+    if len(sys.argv) != 2:
+        send({"op": "error", "error": "worker expects exactly one snapshot path"})
+        return 0
+    run(Path(sys.argv[1]), send, receive)
     return 0
 
 
