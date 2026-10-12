@@ -144,11 +144,11 @@ class LifecycleTests(unittest.TestCase):
             return run_cli("run", "--repo", repo, "--base", base_rev, "--head", head, "--out", report,
                            *extra, env=env)
 
-        failed = run(regression)
+        failed = run(regression, "--sandbox", "host")
         self.assertEqual(failed.returncode, 1, failed.stderr)
         self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["aggregate"], "FAILED")
         self.assertTrue(report.with_suffix(".md").exists())
-        self.assertIn("UNSANDBOXED", failed.stderr)  # test default sandbox is host
+        self.assertIn("UNSANDBOXED", failed.stderr)  # explicit host mode prints the warning
 
         passed = run(refactor)
         self.assertEqual(passed.returncode, 0, passed.stderr)
