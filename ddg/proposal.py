@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import adapters, providers
+from .providers import gemini_api as _gemini_api  # noqa: F401 (registers + exposes providers.gemini_api)
 from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
 from .gitio import list_at, read_at, resolve_commit
 
@@ -44,7 +46,8 @@ def _records(repo: Path, revision: str) -> list[dict]:
     return records
 
 
-def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None = None) -> dict:
+def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None = None,
+                 adapter: str = ADAPTER_VERSION) -> dict:
     """Load the active decision and corrected source from one pinned commit."""
     source_sha = resolve_commit(Path(repo), revision or "HEAD")
     decisions = validate_decisions(_records(Path(repo), source_sha))
@@ -54,17 +57,21 @@ def load_context(repo: Path, decision_id: str = "DEC-002", revision: str | None 
     previous_id = decision["supersedes"]
     if previous_id is None or previous_id not in decisions:
         raise ValueError("Active decision has no recorded predecessor")
-    try:
-        source = read_at(Path(repo), source_sha, "src/job_client.py")
-    except ValueError as exc:
-        raise ValueError("Pinned corrected source is unavailable") from exc
+    if adapter == ADAPTER_VERSION:
+        try:
+            source = read_at(Path(repo), source_sha, "src/job_client.py")
+        except ValueError as exc:
+            raise ValueError("Pinned corrected source is unavailable") from exc
+    else:
+        adapters.get(adapter)  # validates the name; generic adapters carry no fixed source file
+        source = ""
     return {
         "source_sha": source_sha,
         "old_decision": decisions[previous_id],
         "new_decision": decision,
         "decisions": decisions,
         "source": source,
-        "adapter_version": ADAPTER_VERSION,
+        "adapter_version": adapter,
         "prompt_version": PROMPT_VERSION,
         "vocabulary": copy.deepcopy(VOCABULARY),
     }
@@ -144,12 +151,13 @@ def _verify_capture(capture: dict, expected_input_digest: str) -> None:
         raise ValueError("Recorded proposal capture metadata is incomplete")
 
 
-def wrap_draft(context: dict, check: dict, mode: str = "manual", model: str | None = None) -> dict:
+def wrap_draft(context: dict, check: dict, mode: str = "manual", model: str | None = None,
+               sdk_version: str | None = None) -> dict:
     """Validate a supplied body and bind it to content and provenance."""
     normalized = validate_citations(check, _proposal_decisions(context))
     if mode not in {"live", "recorded", "manual"}:
         raise ValueError("Unknown proposal mode")
-    if context.get("adapter_version") != ADAPTER_VERSION:
+    if context.get("adapter_version") not in adapters.names():
         raise ValueError("Proposal context names an unsupported adapter")
     source_sha = context.get("source_sha")
     if not isinstance(source_sha, str) or len(source_sha) != 40 or any(c not in "0123456789abcdefABCDEF" for c in source_sha):
@@ -158,14 +166,16 @@ def wrap_draft(context: dict, check: dict, mode: str = "manual", model: str | No
     if mode == "recorded":
         _verify_capture(capture, input_digest(context))
     captured_at = capture.get("captured_at") if isinstance(capture, dict) else None
-    sdk_version = capture.get("sdk_version") if isinstance(capture, dict) else None
+    if isinstance(capture, dict):
+        sdk_version = capture.get("sdk_version")
     capture_source_sha = capture.get("source_sha") if isinstance(capture, dict) else None
     if mode == "live":
         captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        try:
-            sdk_version = importlib.metadata.version("google-genai")
-        except importlib.metadata.PackageNotFoundError:
-            sdk_version = None
+        if sdk_version is None:
+            try:
+                sdk_version = importlib.metadata.version("google-genai")
+            except importlib.metadata.PackageNotFoundError:
+                sdk_version = None
     envelope = {
         "check": normalized,
         "input_digest": input_digest(context),
@@ -191,7 +201,10 @@ def _load_env_file(env_file: Path | None = None) -> None:
         lines = path.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
         return
-    allowed = {"GEMINI_API_KEY", "DDG_GEMINI_MODEL"}
+    allowed = {"GEMINI_API_KEY", "DDG_GEMINI_MODEL", "DDG_PROVIDER", "DDG_MODEL", "DDG_PROVIDER_TIMEOUT",
+               "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL", "OPENAI_API_KEY", "OPENAI_BASE_URL",
+               "AWS_BEARER_TOKEN_BEDROCK", "AWS_REGION", "AWS_DEFAULT_REGION", "DDG_AWS_REGION",
+               "DDG_CLI_COMMAND"}
     for line in lines:
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or "=" not in stripped:
@@ -241,7 +254,7 @@ def _prompt(context: dict, repair: str | None = None) -> str:
         "Cite exact substrings from the decision rule or exceptions. If the decision cannot be expressed with this "
         "fixed vocabulary, return UNSUPPORTED_DECISION and a concise reason. Do not propose code, commands, paths, "
         "or arbitrary expressions.\nEVIDENCE_JSON:\n" +
-        json.dumps(evidence, sort_keys=True, ensure_ascii=False, separators=(",", ":")) +
+        json.dumps(evidence, sort_keys=True, ensure_ascii=True, separators=(",", ":")) +
         ("\nREPAIR: " + repair if repair else "")
     )
 
@@ -266,26 +279,13 @@ class _ProviderDeadlineExceeded(Exception):
     pass
 
 
-def _provider_request(client: Any, model: str, prompt: str) -> str:
-    result = client.interactions.create(
-        model=model,
-        input=prompt,
-        response_format={"type": "text", "mime_type": "application/json", "schema": _response_schema()},
-        timeout=30,
-    )
-    output = getattr(result, "output_text", None)
-    if not isinstance(output, str):
-        raise ValueError("Provider returned no text output")
-    return output
-
-
-def _provider_call(client: Any, model: str, prompt: str) -> str:
-    """Bound total wall time even when SDK retries outlive its HTTP timeout."""
+def _provider_call(provider: Any, prompt: str, timeout: int, deadline: float) -> str:
+    """Bound total wall time even when an SDK or CLI outlives its own timeout."""
     completed: queue.Queue[tuple[bool, Any]] = queue.Queue(maxsize=1)
 
     def call() -> None:
         try:
-            completed.put_nowait((True, _provider_request(client, model, prompt)))
+            completed.put_nowait((True, provider.complete(prompt, _response_schema(), timeout)))
         except BaseException as exc:
             # The worker only transfers an immutable result/exception; proposal and
             # session state are built exclusively by the waiting caller.
@@ -297,7 +297,7 @@ def _provider_call(client: Any, model: str, prompt: str) -> str:
     worker = threading.Thread(target=call, name="ddg-provider-request", daemon=True)
     worker.start()
     try:
-        succeeded, result = completed.get(timeout=_PROVIDER_CALL_DEADLINE_SECONDS)
+        succeeded, result = completed.get(timeout=deadline)
     except queue.Empty as exc:
         raise _ProviderDeadlineExceeded from exc
     if not succeeded:
@@ -305,7 +305,22 @@ def _provider_call(client: Any, model: str, prompt: str) -> str:
     return result
 
 
-def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
+def _select_provider(context: dict, client: Any, provider: Any) -> Any:
+    """Explicit provider > injected Gemini SDK client (legacy) > DDG_PROVIDER / default."""
+    if provider is not None:
+        return provider
+    try:
+        if client is not None:
+            model = os.environ.get("DDG_GEMINI_MODEL", "").strip()
+            if not model:
+                raise ValueError("DDG_GEMINI_MODEL is required for live proposals")
+            return providers.gemini_api.GeminiApi(model, client=client)
+        return providers.create(context.get("provider"), context.get("model"), os.environ)
+    except providers.ProviderError as exc:
+        raise ValueError(str(exc)) from None
+
+
+def propose(context: dict, mode: str = "live", client: Any = None, provider: Any = None) -> dict:
     """Create a live, recorded, or explicit manual proposal; never fall back silently."""
     if mode == "manual":
         manual = context.get("manual_check")
@@ -323,28 +338,28 @@ def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
     if mode != "live":
         raise ValueError("Unknown proposal mode")
 
+    if context.get("adapter_version") != ADAPTER_VERSION:
+        raise ValueError("AI proposals support only " + ADAPTER_VERSION + "; supply a manual check for other adapters")
     _load_env_file(Path(context["env_file"]) if context.get("env_file") else None)
-    model = os.environ.get("DDG_GEMINI_MODEL", "").strip()
-    if not model:
-        raise ValueError("DDG_GEMINI_MODEL is required for live proposals")
-    if client is None:
-        key = os.environ.get("GEMINI_API_KEY", "").strip()
-        if not key:
-            raise ValueError("GEMINI_API_KEY is required for live proposals")
-        try:
-            from google import genai
-            from google.genai import types
-            client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=30000))
-        except Exception as exc:
-            raise ValueError("Could not initialize the proposal provider") from exc
+    provider = _select_provider(context, client, provider)
+    try:
+        timeout = providers.timeout_seconds(provider, os.environ)
+    except providers.ProviderError as exc:
+        raise ValueError(str(exc)) from None
+    # 30 s is the long-standing default hard deadline (patchable in tests); other values are explicit.
+    deadline = _PROVIDER_CALL_DEADLINE_SECONDS if timeout == 30 else timeout
+    described = provider.describe()
+    model = described["model"]
 
     attempts: list[dict] = []
     repair: str | None = None
     for attempt_number in (1, 2):
         try:
-            raw = _provider_call(client, model, _prompt(context, repair))
+            raw = _provider_call(provider, _prompt(context, repair), timeout, deadline)
         except _ProviderDeadlineExceeded:
             raise ValueError("Proposal provider request timed out") from None
+        except providers.ProviderError as exc:
+            raise ValueError(f"Proposal provider request failed ({exc.code}): {exc}") from None
         except Exception:
             raise ValueError("Proposal provider request failed") from None
         try:
@@ -359,7 +374,7 @@ def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
                 continue
             raise ValueError("Proposal failed local schema or citation validation") from exc
         attempts.append({"attempt": attempt_number, "result": "accepted"})
-        draft = wrap_draft(context, check, mode="live", model=model)
+        draft = wrap_draft(context, check, mode="live", model=model, sdk_version=described["client_version"])
         draft["attempts"] = attempts
         draft["request_metadata"] = {
             "model": model,
@@ -367,7 +382,8 @@ def propose(context: dict, mode: str = "live", client: Any = None) -> dict:
             "input_digest": input_digest(context),
             "request_count": len(attempts),
             "response_format": "application/json",
-            "timeout_seconds": 30,
+            "timeout_seconds": timeout,
+            "provider": provider.name,
         }
         draft["provider_response"] = {
             "status": "DRAFT",

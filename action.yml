@@ -1,0 +1,76 @@
+name: Decision Drift Gate
+description: Check a pull request against approved decision checks, run untrusted code in a container, and comment the result.
+inputs:
+  base-ref:
+    description: Base commit SHA. Defaults to the pull_request base SHA.
+    default: ${{ github.event.pull_request.base.sha }}
+  head-ref:
+    description: Head commit SHA. Defaults to the pull_request head SHA.
+    default: ${{ github.event.pull_request.head.sha }}
+  sandbox:
+    description: Sandbox mode (docker or host). host runs untrusted code unsafely.
+    default: docker
+  python-version:
+    description: Python version used to run ddg.
+    default: "3.12"
+  fail-on-incomplete:
+    description: Fail the job when the result is INCOMPLETE (exit code 2).
+    default: "true"
+  post-comment:
+    description: Post or update the PR comment (needs pull-requests write).
+    default: "true"
+# Caller must run actions/checkout with fetch-depth: 0 (both base and head commits must be present)
+# and persist-credentials: false. This action never checks out code itself.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install ddg
+      shell: bash
+      run: python -m pip install "${{ github.action_path }}"
+    - name: Run ddg
+      id: run
+      shell: bash
+      env:
+        BASE: ${{ inputs.base-ref }}
+        HEAD: ${{ inputs.head-ref }}
+        SANDBOX: ${{ inputs.sandbox }}
+      run: |
+        set +e
+        ddg run --repo . --base "$BASE" --head "$HEAD" --out ddg-report.json --sandbox "$SANDBOX"
+        echo "exit-code=$?" >> "$GITHUB_OUTPUT"
+        exit 0
+    - name: Render Markdown
+      if: always()
+      shell: bash
+      run: python "${{ github.action_path }}/scripts/pr_comment.py" --report ddg-report.json > ddg-report.md
+    - name: Upload report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ddg-report
+        path: |
+          ddg-report.json
+          ddg-report.md
+        if-no-files-found: warn
+    - name: Comment on PR
+      if: always() && inputs.post-comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: python "${{ github.action_path }}/scripts/pr_comment.py" --report ddg-report.json --post > /dev/null
+    - name: Set job result
+      shell: bash
+      env:
+        CODE: ${{ steps.run.outputs.exit-code }}
+        FAIL_INCOMPLETE: ${{ inputs.fail-on-incomplete }}
+      run: |
+        case "$CODE" in
+          0) echo "ddg: PASSED_CHECKS" ;;
+          1) echo "::error::ddg: FAILED (decision drift detected)"; exit 1 ;;
+          2) if [ "$FAIL_INCOMPLETE" = "true" ]; then echo "::error::ddg: INCOMPLETE"; exit 1;
+             else echo "::warning::ddg: INCOMPLETE (neutral)"; fi ;;
+          *) echo "::error::ddg: error (exit $CODE)"; exit 1 ;;
+        esac

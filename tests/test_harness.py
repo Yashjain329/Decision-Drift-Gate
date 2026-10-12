@@ -2,7 +2,6 @@ import json
 import os
 import subprocess
 import copy
-import io
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -10,7 +9,6 @@ from unittest.mock import patch
 
 from ddg.demo import build_demo
 from ddg.harness import FakeService, _small_worker_environment, observe, observe_happy_path
-from ddg import worker
 
 
 CHECK = json.loads(Path("examples/manual_check.json").read_text(encoding="utf-8"))
@@ -92,17 +90,6 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["status"], "FAIL")
             self.assertTrue(result["returned_job_exists"])
 
-    def test_worker_json_protocol_writes_unicode_as_utf8(self):
-        stream = io.TextIOWrapper(io.BytesIO(), encoding="ascii")
-        result = {"status": "ERROR", "events": [], "error": "synthetic diagnostic 雪"}
-        with patch.object(worker.sys, "argv", ["worker.py", "snapshot.py"]), \
-                patch.object(worker.sys, "stdin", io.StringIO('{"scenario":"none","check":null}')), \
-                patch.object(worker.sys, "stdout", stream), \
-                patch("ddg.worker.run", return_value=result):
-            worker.main()
-        stream.flush()
-        self.assertIn("synthetic diagnostic 雪", stream.buffer.getvalue().decode("utf-8"))
-
     def test_worker_environment_excludes_provider_secrets(self):
         with patch.dict(os.environ, {"GEMINI_API_KEY": "secret-a", "DDG_GEMINI_MODEL": "secret-b", "API_KEY": "secret-c"}):
             worker_env = _small_worker_environment()
@@ -148,20 +135,36 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(result["status"], "ERROR")
             self.assertIn("dynamic", result["error"].lower())
 
-    def test_malformed_worker_result_fields_become_errors(self):
-        parse_output = __import__("ddg.harness", fromlist=["_parse_worker_output"])._parse_worker_output
-        valid = {"status": "PASS", "unique_jobs": 1, "returned_job_exists": True,
-                 "returned_job_id": "job-1", "submit_calls": 1, "events": [], "error": None}
-        for bad_status in ([], {}):
-            candidate = dict(valid, status=bad_status)
-            result = parse_output(0, json.dumps(candidate))
+    def _commit_source(self, repo, source):
+        (repo / "src" / "job_client.py").write_text(source, encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "src/job_client.py"], check=True)
+        subprocess.run(["git", "-C", str(repo), "-c", "user.name=T", "-c", "user.email=t@e.invalid",
+                        "commit", "--quiet", "-m", "fixture"], check=True)
+
+    def test_target_cannot_tamper_with_observed_service_state(self):
+        source = (
+            "def submit_job(service, payload, operation_id):\n"
+            "    service.create(payload, operation_id)\n"
+            "    r = service.create(payload, operation_id)\n"
+            "    service.jobs = []\n"
+            "    service.events = []\n"
+            "    service._create_calls = 1\n"
+            "    return r.job_id\n"
+        )
+        with TemporaryDirectory(prefix="ddg tamper ") as folder:
+            repo = Path(build_demo(Path(folder) / "repo")["repo"])
+            self._commit_source(repo, source)
+            result = observe(repo, "HEAD", CHECK)
+            self.assertEqual((result["status"], result["unique_jobs"]), ("FAIL", 2))
+
+    def test_filesystem_and_process_modules_are_rejected(self):
+        source = "import os\ndef submit_job(service, payload, operation_id):\n    return None\n"
+        with TemporaryDirectory(prefix="ddg denied ") as folder:
+            repo = Path(build_demo(Path(folder) / "repo")["repo"])
+            self._commit_source(repo, source)
+            result = observe(repo, "HEAD", CHECK)
             self.assertEqual(result["status"], "ERROR")
-            self.assertIsNone(result["unique_jobs"])
-        for key, value in (("unique_jobs", "1"), ("returned_job_exists", "yes"), ("submit_calls", [])):
-            candidate = dict(valid, **{key: value})
-            result = parse_output(0, json.dumps(candidate))
-            self.assertEqual(result["status"], "ERROR")
-            self.assertIsNone(result["unique_jobs"])
+            self.assertIn("Unsupported import", result["error"])
 
     def test_invalid_check_is_rejected_before_worker_starts(self):
         invalid = dict(CHECK)

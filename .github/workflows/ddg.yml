@@ -1,0 +1,22 @@
+name: ddg
+on:
+  pull_request:
+
+# Least privilege: read code, write only the PR comment.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ddg:
+    runs-on: ubuntu-latest
+    steps:
+      # NOTE: untrusted PR code runs only inside the container sandbox (sandbox: docker).
+      # Do not switch to host mode on pull_request_target or with secrets available.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./
+        with:
+          sandbox: docker

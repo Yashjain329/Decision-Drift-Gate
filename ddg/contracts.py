@@ -14,8 +14,14 @@ _TOP_LEVEL = {
     "schema_version", "id", "decision_id", "supersedes", "adapter",
     "scenario", "assertions", "rationale", "citations",
 }
-_SCENARIOS = {"commit_then_503", "reject_then_503"}
 _ID = re.compile(r"^(CHK|DEC)-[A-Za-z0-9][A-Za-z0-9._-]*$")
+# Length caps keep records reviewable and bound prompt/report size.
+MAX_ID = 64
+MAX_SCOPE = 500
+MAX_RULE = 4000
+MAX_RATIONALE = 2000
+MAX_QUOTE = 1000
+MAX_ITEMS = 20  # citations per check, exceptions per decision
 
 
 def _json_value(value: Any) -> None:
@@ -59,13 +65,27 @@ def digest(value: dict) -> str:
 
 
 def _record_id(value: Any, prefix: str, field: str) -> None:
-    if not isinstance(value, str) or not _ID.fullmatch(value) or not value.startswith(prefix + "-"):
+    if (not isinstance(value, str) or len(value) > MAX_ID or not _ID.fullmatch(value)
+            or not value.startswith(prefix + "-")):
         raise ValueError(f"{field} must be a valid {prefix} identifier")
 
 
-def _nonblank(value: Any, field: str) -> None:
+def _nonblank(value: Any, field: str, cap: int) -> None:
+    """Free text: nonblank, at most ``cap`` characters, no NUL, no lone surrogates.
+
+    The text is deliberately NOT Unicode-normalized: NFC and NFD forms are different
+    records (different digests, and a citation quote must match byte-for-byte).
+    """
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a nonblank string")
+    if len(value) > cap:
+        raise ValueError(f"{field} exceeds {cap} characters")
+    if "\x00" in value:
+        raise ValueError(f"{field} must not contain NUL")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ValueError(f"{field} must be valid Unicode") from None
 
 
 def validate_check(value: dict) -> dict:
@@ -84,42 +104,18 @@ def validate_check(value: dict) -> dict:
     _record_id(value["id"], "CHK", "id")
     _record_id(value["decision_id"], "DEC", "decision_id")
     _record_id(value["supersedes"], "DEC", "supersedes")
-    if not isinstance(value["adapter"], str) or value["adapter"] != ADAPTER_VERSION:
-        raise ValueError("Unsupported adapter")
-    if not isinstance(value["scenario"], str) or value["scenario"] not in _SCENARIOS:
-        raise ValueError("Unsupported scenario")
-    _nonblank(value["rationale"], "rationale")
-
-    assertions = value["assertions"]
-    if not isinstance(assertions, list) or len(assertions) != 2:
-        raise ValueError("assertions must contain exactly two metrics")
-    by_metric: dict[str, Any] = {}
-    for assertion in assertions:
-        if not isinstance(assertion, dict) or set(assertion) != {"metric", "equals"}:
-            raise ValueError("Each assertion must contain only metric and equals")
-        metric = assertion["metric"]
-        if not isinstance(metric, str) or metric not in {"unique_jobs", "returned_job_exists"}:
-            raise ValueError("Unsupported assertion metric")
-        if metric in by_metric:
-            raise ValueError("Assertion metrics must be distinct")
-        expected = assertion["equals"]
-        if metric == "unique_jobs":
-            if isinstance(expected, bool) or not isinstance(expected, int) or expected not in (0, 1, 2):
-                raise ValueError("unique_jobs equals must be integer 0, 1, or 2")
-        elif not isinstance(expected, bool):
-            raise ValueError("returned_job_exists equals must be boolean")
-        by_metric[metric] = expected
-    if set(by_metric) != {"unique_jobs", "returned_job_exists"}:
-        raise ValueError("Both required assertion metrics must be present")
+    from . import adapters  # local import: adapters depend on this module's helpers
+    adapters.get(value["adapter"]).validate_body(value)
+    _nonblank(value["rationale"], "rationale", MAX_RATIONALE)
 
     citations = value["citations"]
-    if not isinstance(citations, list) or not citations:
-        raise ValueError("citations must be a nonempty list")
+    if not isinstance(citations, list) or not citations or len(citations) > MAX_ITEMS:
+        raise ValueError(f"citations must be a list of 1 to {MAX_ITEMS} items")
     for citation in citations:
         if not isinstance(citation, dict) or set(citation) != {"decision_id", "quote"}:
             raise ValueError("Each citation must contain only decision_id and quote")
         _record_id(citation["decision_id"], "DEC", "citation decision_id")
-        _nonblank(citation["quote"], "citation quote")
+        _nonblank(citation["quote"], "citation quote", MAX_QUOTE)
 
     return copy.deepcopy(value)
 
@@ -146,12 +142,12 @@ def validate_decisions(records: list[dict]) -> dict[str, dict]:
         predecessor = record["supersedes"]
         if predecessor is not None:
             _record_id(predecessor, "DEC", "decision supersedes")
-        _nonblank(record["scope"], "decision scope")
-        _nonblank(record["rule"], "decision rule")
-        if not isinstance(record["exceptions"], list):
-            raise ValueError("Decision exceptions must be a list")
+        _nonblank(record["scope"], "decision scope", MAX_SCOPE)
+        _nonblank(record["rule"], "decision rule", MAX_RULE)
+        if not isinstance(record["exceptions"], list) or len(record["exceptions"]) > MAX_ITEMS:
+            raise ValueError(f"Decision exceptions must be a list of at most {MAX_ITEMS}")
         for exception in record["exceptions"]:
-            _nonblank(exception, "decision exception")
+            _nonblank(exception, "decision exception", MAX_RULE)
         by_id[record["id"]] = copy.deepcopy(record)
 
     active_successors: dict[str, list[str]] = {}

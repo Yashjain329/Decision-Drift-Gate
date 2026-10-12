@@ -8,11 +8,13 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .contracts import ADAPTER_VERSION, validate_check
+from . import sandbox
 from .gitio import read_at, resolve_commit
 
 
@@ -95,32 +97,76 @@ def _error_observation(message: str, events: list[dict[str, Any]] | None = None)
     }
 
 
-def _parse_worker_output(returncode: int, stdout: str) -> dict:
-    if returncode != 0:
-        return _error_observation(f"Worker exited with status {returncode}")
+_MAX_LINE = 1 << 20
+_MAX_MESSAGES = 1000  # a flood of valid calls must not grow the parent's event log until the timeout
+
+
+def _drive_worker(proc: subprocess.Popen, service: FakeService) -> dict:
+    """Serve the worker's service calls; return its final message or an error."""
+    def fail(message: str) -> dict:
+        return {"op": "error", "error": message}
+
     try:
-        result = json.loads(stdout)
-    except (json.JSONDecodeError, TypeError):
-        return _error_observation("Worker returned malformed JSON")
-    if not isinstance(result, dict) or not isinstance(result.get("status"), str):
-        return _error_observation("Worker returned an invalid observation")
-    required = {"status", "unique_jobs", "returned_job_exists", "returned_job_id", "submit_calls", "events", "error"}
-    if set(result) != required or result["status"] not in {"PASS", "FAIL", "ERROR"}:
-        return _error_observation("Worker observation has an invalid shape")
-    if not isinstance(result["events"], list) or any(not isinstance(event, dict) for event in result["events"]):
-        return _error_observation("Worker event trace is malformed")
-    if result["error"] is not None and not isinstance(result["error"], str):
-        return _error_observation("Worker error detail is malformed", result["events"])
-    if result["status"] == "ERROR":
-        return _error_observation(result["error"] or "Target execution failed", result["events"])
-    if (isinstance(result["unique_jobs"], bool) or not isinstance(result["unique_jobs"], int)
-            or result["unique_jobs"] < 0
-            or not isinstance(result["returned_job_exists"], bool)
-            or (result["returned_job_id"] is not None and not isinstance(result["returned_job_id"], str))
-            or isinstance(result["submit_calls"], bool) or not isinstance(result["submit_calls"], int)
-            or result["submit_calls"] < 0):
-        return _error_observation("Worker metrics are malformed", result["events"])
-    return result
+        for count, line in enumerate(iter(lambda: proc.stdout.readline(_MAX_LINE + 1), "")):
+            if count >= _MAX_MESSAGES:
+                return fail("Worker sent too many messages")
+            if len(line) > _MAX_LINE:
+                return fail("Worker message exceeded the size limit")
+            try:
+                msg = json.loads(line)
+            except json.JSONDecodeError:
+                return fail("Worker returned malformed JSON")
+            op = msg.get("op") if isinstance(msg, dict) else None
+            if op == "create":
+                key = msg.get("idempotency_key")
+                if (not isinstance(msg.get("operation_id"), str)
+                        or not (key is None or isinstance(key, str))):
+                    return fail("Worker sent a malformed service call")
+                reply = service.create(msg.get("payload"), msg["operation_id"], key)
+                reply = {"status": reply.status, "job_id": reply.job_id}
+            elif op == "lookup":
+                if not isinstance(msg.get("operation_id"), str):
+                    return fail("Worker sent a malformed service call")
+                reply = {"job_id": service.lookup(msg["operation_id"])}
+            elif op == "done":
+                returned = msg.get("returned")
+                return msg if returned is None or isinstance(returned, str) else fail("Worker returned an invalid job id")
+            elif op == "error":
+                return fail(str(msg.get("error"))[:300] or "Target execution failed")
+            else:
+                return fail("Worker sent an unknown message")
+            proc.stdin.write(json.dumps(reply) + "\n")
+            proc.stdin.flush()
+    except (OSError, ValueError):
+        return fail("Worker connection failed")
+    return fail(f"Worker exited with status {proc.poll()} without a result")
+
+
+def _observe_run(service: FakeService, outcome: dict) -> dict:
+    """Build the observation from parent-owned state; the target only supplies a return value."""
+    if outcome["op"] == "error":
+        return _error_observation(outcome["error"], service.events)
+    returned = outcome.get("returned")
+    return {
+        "status": "PASS",
+        "unique_jobs": len(service.jobs),
+        "returned_job_exists": returned is not None and any(job["job_id"] == returned for job in service.jobs),
+        "returned_job_id": returned,
+        "submit_calls": service._create_calls,
+        "events": service.events,
+        "error": None,
+    }
+
+
+# Best-effort static screen, not an OS sandbox: it keeps ordinary code from reaching
+# the filesystem, processes or network by accident or in the obvious ways.
+_DENIED_MODULES = {
+    "os", "sys", "subprocess", "socket", "ctypes", "shutil", "pathlib", "io", "gc",
+    "inspect", "multiprocessing", "signal", "tempfile", "urllib", "http", "ftplib",
+    "smtplib", "webbrowser", "pickle", "marshal", "code", "codeop", "pty", "posix",
+    "nt", "_thread", "builtins", "_io", "_socket", "_winapi", "_posixsubprocess", "_ctypes",
+}
+_DENIED_CALLS = {"__import__", "eval", "exec", "compile", "open", "globals", "vars"}
 
 
 def _external_import_error(source: str) -> str | None:
@@ -136,6 +182,8 @@ def _external_import_error(source: str) -> str | None:
         else:
             continue
         for name in names:
+            if name in _DENIED_MODULES:
+                return f"Unsupported import: {name}"
             if name in {"importlib", "runpy"}:
                 return f"Unsupported dynamic import mechanism: {name}"
             if name not in sys.stdlib_module_names:
@@ -144,22 +192,22 @@ def _external_import_error(source: str) -> str | None:
             if any(alias.name in {"__import__", "eval", "exec"} for alias in node.names):
                 return "Unsupported dynamic execution mechanism"
     for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == "__builtins__":
+            return "Unsupported dynamic execution mechanism"
         if not isinstance(node, ast.Call):
             continue
         function = node.func
-        if isinstance(function, ast.Name) and function.id in {"__import__", "eval", "exec"}:
+        if isinstance(function, ast.Name) and function.id in _DENIED_CALLS:
             return "Unsupported dynamic execution mechanism"
         if isinstance(function, ast.Attribute) and function.attr == "import_module":
             return "Unsupported dynamic import mechanism"
     return None
 
 
-def _small_worker_environment() -> dict[str, str]:
-    allowed = {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR", "LANG", "LC_ALL"}
-    return {key: value for key, value in os.environ.items() if key.upper() in allowed}
+_small_worker_environment = sandbox.small_environment
 
 
-def _execute(repo: Path, sha: str, scenario: str, check: dict | None, timeout: float) -> dict:
+def _execute(repo: Path, sha: str, scenario: str, timeout: float) -> dict:
     if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
         raise ValueError("timeout must be a positive number")
     try:
@@ -179,33 +227,31 @@ def _execute(repo: Path, sha: str, scenario: str, check: dict | None, timeout: f
         module_path.parent.mkdir(parents=True)
         module_path.write_text(source, encoding="utf-8")
         worker_path = Path(__file__).with_name("worker.py").resolve()
-        request = json.dumps({"scenario": scenario, "check": check}, separators=(",", ":"))
-        worker_env = _small_worker_environment()
-        worker_env["PYTHONIOENCODING"] = "utf-8"
+        service = FakeService(scenario)
         try:
-            completed = subprocess.run(
-                [sys.executable, str(worker_path), str(module_path)],
-                input=request,
-                text=True,
-                encoding="utf-8",
-                capture_output=True,
-                cwd=temp_root,
-                env=worker_env,
-                timeout=float(timeout),
-                shell=False,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
-            return _error_observation("Target execution timed out")
+            proc, runtime, container_name = sandbox.launch(worker_path, module_path, temp_root)
+        except sandbox.SandboxUnavailable as exc:
+            return _error_observation(str(exc))
         except (OSError, ValueError) as exc:
             return _error_observation(f"Worker could not run: {type(exc).__name__}")
-        return _parse_worker_output(completed.returncode, completed.stdout)
+        result: dict = {}
+        try:
+            driver = threading.Thread(target=lambda: result.update(_drive_worker(proc, service)), daemon=True)
+            driver.start()
+            driver.join(float(timeout))
+            timed_out = driver.is_alive()
+        finally:  # also on KeyboardInterrupt or a failed thread start: never leak the container
+            sandbox.reap(proc, runtime, container_name)
+        driver.join(2)
+        if timed_out:
+            return _error_observation("Target execution timed out")
+        return _observe_run(service, result or {"op": "error", "error": "Worker produced no result"})
 
 
 def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
     """Run a validated check against the module stored at one Git revision."""
     checked = validate_check(check)
-    observation = _execute(Path(repo), sha, checked["scenario"], checked, timeout)
+    observation = _execute(Path(repo), sha, checked["scenario"], timeout)
     if observation["status"] == "ERROR":
         return observation
     assertions_pass = all(
@@ -222,7 +268,7 @@ def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
 
 def observe_happy_path(repo: Path, sha: str, timeout: float = 10) -> dict:
     """Observe ordinary successful submission against a fault-free service."""
-    observation = _execute(Path(repo), sha, "none", None, timeout)
+    observation = _execute(Path(repo), sha, "none", timeout)
     if observation["status"] == "ERROR":
         return observation
     completed = isinstance(observation["returned_job_id"], str) and observation["returned_job_exists"]
