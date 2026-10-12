@@ -1,5 +1,5 @@
 """Enable ``python -m ddg``."""
 
-from .cli import main
+from . import console_main
 
-raise SystemExit(main())
+console_main()
