@@ -13,7 +13,7 @@ import json
 import os
 from pathlib import Path
 
-from .gitio import commit_identity, commits_touching, read_at
+from .gitio import commit_identity, commits_touching, entry_mode_at, read_at
 
 POLICY_PATH = ".ddg/approvers.json"
 _ARTIFACT_PREFIXES = (".ddg/checks/", ".ddg/validations/", ".ddg/approvals/")
@@ -29,9 +29,11 @@ def unverified_allowed() -> bool:
 
 def load_policy(repo: Path, base_sha: str) -> dict | None:
     try:
+        if entry_mode_at(repo, base_sha, POLICY_PATH) is None:
+            return None  # genuinely absent; anything present but unreadable must fail closed below
         raw = read_at(repo, base_sha, POLICY_PATH)
-    except ValueError:
-        return None
+    except ValueError as exc:
+        raise IdentityError(f"Approver policy is unreadable: {exc}") from exc
     try:
         policy = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -55,13 +57,19 @@ def verify_approver(repo: Path, base_sha: str, check_id: str) -> dict:
     artifacts = [f"{prefix}{check_id}.json" for prefix in _ARTIFACT_PREFIXES]
     commits: list[str] = []
     for artifact in artifacts:
-        found = commits_touching(repo, base_sha, artifact)
+        try:
+            found = commits_touching(repo, base_sha, artifact)
+        except ValueError as exc:
+            raise IdentityError(f"Cannot read approval history for {artifact}: {exc}") from exc
         if not found:
-            raise IdentityError(f"No commit history for {artifact} (shallow clone?)")
+            raise IdentityError(f"No commit history for {artifact}")
         commits.extend(c for c in found if c not in commits)
     evidence = []
     for commit in commits:
-        info = commit_identity(repo, commit)
+        try:
+            info = commit_identity(repo, commit)
+        except ValueError as exc:
+            raise IdentityError(f"Cannot read identity of commit {commit[:12]}: {exc}") from exc
         if info["author_email"] not in policy["approvers"]:
             raise IdentityError(f"Commit {commit[:12]} author is not an allowed approver")
         if any(not p.startswith(_ARTIFACT_PREFIXES) for p in info["paths"]):
