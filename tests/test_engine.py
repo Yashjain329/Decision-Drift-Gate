@@ -168,7 +168,8 @@ class EngineTests(unittest.TestCase):
         draft = wrap_draft(context, check, mode="manual")
         validation = validate_draft(self.repo, draft, self.refs)
         approve(self.repo, draft, validation, "Test Developer", "Review successor coverage")
-        current_base = commit_fixture(self.repo, historical_base, {}, "Approve successor check")
+        current_base = commit_fixture(self.repo, historical_base, {}, "Approve successor check",
+                                     email="ddg-demo@example.invalid")
         source = read_at(self.repo, current_base, "src/job_client.py")
         head = commit_fixture(self.repo, current_base, {"src/job_client.py": "# harmless change\n" + source},
                               "Change source under successor policy")

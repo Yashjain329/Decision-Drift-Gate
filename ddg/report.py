@@ -53,6 +53,8 @@ def _markdown(report: dict) -> str:
         f"**Base commit:** `{_escaped(report.get('base_sha'))}`",
         f"**Head commit:** `{_escaped(report.get('head_sha'))}`",
         f"**Adapter:** {_escaped(report.get('adapter_version'))}",
+        f"**Isolation:** {_escaped(report.get('sandbox', 'not recorded'))}"
+        + (" (UNSAFE: reviewed code ran on the host)" if report.get("sandbox") == "host" else ""),
         f"**Run time (UTC):** {_escaped(report.get('run_at'))}",
         "",
         "This report records approved-check observations for the two commits above.",
