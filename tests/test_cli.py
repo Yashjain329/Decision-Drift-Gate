@@ -84,7 +84,7 @@ class CliTests(unittest.TestCase):
                                 "--validation", validation_path, "--reviewer", "CLI reviewer",
                                 "--reason", "Reviewed offline calibration cases", "--commit-demo",
                                 "--out", repo / ".ddg" / "forbidden.json")
-        self.assertEqual(rejected.returncode, 2)
+        self.assertEqual(rejected.returncode, 3)
         self.assertFalse((repo / ".ddg/checks/CHK-001.json").exists())
         approval = self.run_cli("approve", "--repo", repo, "--draft", draft_path,
                                 "--validation", validation_path, "--reviewer", "CLI reviewer",
@@ -145,9 +145,9 @@ class CliTests(unittest.TestCase):
         self.assertFalse(is_stale(self.repo, json.loads(path.read_text(encoding="utf-8")),
                                   "approved-base", "corrected"))
 
-    def test_invalid_arguments_return_two_without_traceback(self):
+    def test_invalid_arguments_return_three_without_traceback(self):
         result = self.run_cli("run", "--repo", self.repo)
-        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.returncode, 3)
         self.assertNotIn("Traceback", result.stderr)
         self.assertIn("usage:", result.stderr.lower())
 
