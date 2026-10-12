@@ -13,9 +13,10 @@ interface Props {
   colW?: number; gap?: number; unit?: number; padB?: number; notes?: boolean;
   className?: string;
   label: string;
+  id?: string;
 }
 
-export function Columns({ columns, expected = null, stacked = true, colW = 64, gap = 40, unit = 46, padB = 66, notes = true, className = 'chart', label }: Props) {
+export function Columns({ columns, expected = null, stacked = true, colW = 64, gap = 40, unit = 46, padB = 66, notes = true, className = 'chart', label, id }: Props) {
   const counts = columns.map((c) => (Number.isInteger(c.jobs) ? (c.jobs as number) : 0));
   const max = Math.min(6, Math.max(3, expected ?? 0, ...counts));
   const u = Math.min(unit, (unit * 3) / max);
@@ -25,7 +26,7 @@ export function Columns({ columns, expected = null, stacked = true, colW = 64, g
   const ticks = Array.from({ length: max + 1 }, (_, n) => n);
 
   return (
-    <svg className={className} viewBox={`0 0 ${width} ${base + padB}`} role="img" aria-label={label}>
+    <svg id={id} className={className} viewBox={`0 0 ${width} ${base + padB}`} role="img" aria-label={label}>
       {ticks.map((n) => (
         <g key={`t${n}`}>
           <line x1={padL} y1={base - n * u} x2={width - padR + 8} y2={base - n * u} className="grid-line" />

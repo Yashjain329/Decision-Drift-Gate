@@ -163,7 +163,7 @@ Open `http://127.0.0.1:8765`. In **Check Studio**, select **Recorded proposal**,
 
 For the fast pitch, approve beforehand and begin on **Overview**. Disclose that approval was prepared earlier, then click **Run approved checks** to execute fresh observations.
 
-The viewer is a Next.js + TypeScript app in `web/`. Its static build in `web/out` is committed, so `ddg serve` and `pip install` need no Node. After changing `web/src`, rebuild with `cd web && npm ci && npm run build` and commit `web/out`.
+The viewer is a Next.js + TypeScript app in `web/`. Its static build in `web/out` is committed, so `ddg serve` and `pip install` need no Node. After changing `web/src`, rebuild with `cd web && npm ci && npm run build` and commit `web/out`. The UI end-to-end suite (`npm run test:e2e`, see [web/e2e/README.md](web/e2e/README.md)) runs the built viewer against real engine instances.
 
 ## Run the demo from the CLI
 

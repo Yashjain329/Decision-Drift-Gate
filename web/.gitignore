@@ -3,3 +3,5 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 # out/ IS committed: `pip install` and `ddg serve` must work without Node.
+test-results/
+playwright-report/

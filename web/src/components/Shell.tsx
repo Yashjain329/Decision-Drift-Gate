@@ -33,7 +33,7 @@ export function Topbar() {
         <Readout label="Latest run" value={report ? m.word : 'no run yet'} t={report ? m.tone : null} />
         <Readout label="Exit" value={m.exit} t={report ? m.tone : null} mono />
         <Readout label="Approver" value={report && approver ? (approver.verified ? `verified · ${approver.commits?.[0]?.author_email ?? 'git author'}` : 'UNVERIFIED') : s.approval ? 'recorded · not yet verified' : 'not recorded'} t={report && approver ? (approver.verified ? 'pass' : 'fail') : null} mono />
-        <Readout label="Isolation" value={!iso ? 'no run yet' : iso === 'host' ? 'host · UNSAFE' : iso} t={!iso ? null : iso === 'host' ? 'fail' : iso === 'unavailable' ? 'inc' : 'pass'} mono />
+        <Readout label="Isolation" value={!report ? 'no run yet' : !iso ? 'not recorded' : iso === 'host' ? 'host · UNSAFE' : iso} t={!report ? null : !iso ? 'inc' : iso === 'host' ? 'fail' : iso === 'unavailable' ? 'inc' : 'pass'} mono />
       </dl>
       <div className="connection"><span className={`connection-dot${connected ? ' is-connected' : ''}`} aria-hidden="true" /><span>{connected ? 'Local engine connected' : 'Connecting'}</span></div>
     </header>

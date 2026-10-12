@@ -190,7 +190,7 @@ textarea { resize: vertical; }
 .outcome .ic { width: 18px; height: 18px; stroke-width: 2.2; }
 .outcome-name { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
 .outcome-n { font-family: var(--mono); font-size: 18px; font-weight: 600; }
-.outcome.is-zero { opacity: .45; }
+.outcome.is-zero .h-label, .outcome.is-zero .outcome-n, .outcome.is-zero .ic { color: var(--muted); }
 .outcome.o-pass .ic, .outcome.o-pass .outcome-n { color: var(--lime); }
 .outcome.o-fail .ic, .outcome.o-fail .outcome-n { color: var(--red); }
 .outcome.o-pre .ic, .outcome.o-pre .outcome-n { color: var(--purple); }
@@ -295,7 +295,6 @@ textarea { resize: vertical; }
 .group-head .n { margin-left: auto; color: var(--muted); }
 .group-desc { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
 .group-rows { display: grid; gap: 6px; }
-.group.is-empty { opacity: .45; }
 .group.is-empty .group-desc { display: none; }
 .g-pass .group-head { color: var(--lime); } .g-fail .group-head { color: var(--red); }
 .g-pre .group-head { color: var(--purple); } .g-inc .group-head { color: var(--orange); }

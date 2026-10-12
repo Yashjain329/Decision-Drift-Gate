@@ -76,6 +76,6 @@ export function Assertions({ check, className = 'code-block', label }: { check?:
   );
 }
 
-export function Json({ value, id }: { value: unknown; id?: string }) {
-  return <pre id={id}>{value === undefined || value === null ? 'Not recorded' : JSON.stringify(value, null, 2)}</pre>;
+export function Json({ value, id, label = 'JSON evidence' }: { value: unknown; id?: string; label?: string }) {
+  return <pre id={id} tabIndex={0} aria-label={label}>{value === undefined || value === null ? 'Not recorded' : JSON.stringify(value, null, 2)}</pre>;
 }

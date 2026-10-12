@@ -89,7 +89,7 @@ function EvidenceStack({ report, c }: { report: Report; c: CheckResult | null })
         </div>
       </Evidence>
       <Evidence id="detail-diff-block" title="Change in scope" meta={diff ? `+${add} −${del}` : 'no change in scope'}>
-        <pre id="detail-diff" className="code-block diff">{diff || 'No change to files in the check scope.'}</pre>
+        <pre id="detail-diff" className="code-block diff" tabIndex={0} aria-label="Diff of files in the check scope">{diff || 'No change to files in the check scope.'}</pre>
       </Evidence>
       <Evidence title="Approved check" meta={c?.check ? plural((c.check.assertions ?? []).length, 'assertion') : '—'}>
         <div className="ev-body">

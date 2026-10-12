@@ -26,7 +26,7 @@ function HistoryChart({ history }: { history: RunRecord[] }) {
   while (cols.length < 12) cols.push({ placeholder: true });
   const expected = history.map((h) => h.expected).find((e): e is number => Number.isInteger(e)) ?? null;
   const label = `Runs this session: ${history.map((h) => `${h.label} ${AGGREGATE_LABEL[h.aggregate] ?? h.aggregate}${h.jobs === null ? ', not observed' : `, ${plural(h.jobs, 'job')}`}`).join('; ')}`;
-  return <Columns columns={cols} expected={expected} stacked={false} colW={34} gap={48} unit={38} label={label} />;
+  return <Columns id="history-chart" columns={cols} expected={expected} stacked={false} colW={34} gap={48} unit={38} label={label} />;
 }
 
 export default function Overview() {
@@ -72,7 +72,7 @@ export default function Overview() {
         <article className="panel span-8" aria-labelledby="latest-title">
           <div className="panel-head">
             <h2 id="latest-title">Latest comparison</h2>
-            <Tag tone={sandbox === 'host' ? 'fail' : 'muted'} glyph={sandbox ? 'box' : null}>{!sandbox ? 'isolation —' : sandbox === 'host' ? 'host · unsafe' : `isolated · ${sandbox}`}</Tag>
+            <Tag tone={sandbox === 'host' ? 'fail' : report && !sandbox ? 'inc' : 'muted'} glyph={sandbox ? 'box' : report ? 'help' : null}>{!report ? 'isolation —' : !sandbox ? 'isolation not recorded' : sandbox === 'host' ? 'host · unsafe' : `isolated · ${sandbox}`}</Tag>
           </div>
           {report ? (
             <div id="latest-body" className="revpair">

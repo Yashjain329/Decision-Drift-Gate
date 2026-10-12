@@ -82,7 +82,12 @@ export function DdgProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sync = () => {
       const v = parseView(location.hash);
-      if (v) { setView(v); window.scrollTo({ top: 0 }); }
+      if (v) {
+        // canonicalise legacy aliases (#review -> #runs) so the address bar always names the real view
+        if (location.hash !== `#${v}`) window.history.replaceState(null, '', `#${v}`);
+        setView(v);
+        window.scrollTo({ top: 0 });
+      }
       else window.history.replaceState(null, '', `#${viewRef.current}`);
     };
     sync();
