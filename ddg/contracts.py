@@ -163,14 +163,6 @@ def validate_decisions(records: list[dict]) -> dict[str, dict]:
     if any(len(successors) > 1 for successors in active_successors.values()):
         raise ValueError("Competing active successor decisions require clarification")
 
-    for start in by_id:
-        seen: set[str] = set()
-        current: str | None = start
-        while current is not None:
-            if current in seen:
-                raise ValueError("Decision supersession cycle detected")
-            seen.add(current)
-            current = by_id[current]["supersedes"]
     return by_id
 
 
