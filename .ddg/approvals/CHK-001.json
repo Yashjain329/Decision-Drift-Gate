@@ -1,0 +1,14 @@
+{
+  "approved_at": "2026-10-13T04:26:17Z",
+  "bundle_digest": "15763436dba041c49e2b8a3decbaf3616d70afe108a0c16649cb6c82242505dd",
+  "calibration_hashes": {
+    "bad": "47c1a977317346738acc31c95e56c95388000c83",
+    "exception": "c7ad26aec8178a16181323ede276f23f18595b79",
+    "good": "78237b8325739ce64c9ea01327eab58424c362bc"
+  },
+  "check_id": "CHK-001",
+  "reason": "Dogfood: DDG gates its own decision-graph contract",
+  "reviewer": "STiFLeR7",
+  "schema_version": 1,
+  "validation_digest": "46a9220a98560e794d9e169a4ef13fda6ed6d9fb958715e2ca85c5928481b1b6"
+}

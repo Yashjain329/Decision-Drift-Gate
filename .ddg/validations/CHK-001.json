@@ -1,0 +1,635 @@
+{
+  "adapter_version": "python_function_v1",
+  "calibration_hashes": {
+    "bad": "47c1a977317346738acc31c95e56c95388000c83",
+    "exception": "c7ad26aec8178a16181323ede276f23f18595b79",
+    "good": "78237b8325739ce64c9ea01327eab58424c362bc"
+  },
+  "cases": {
+    "bad": {
+      "observation": {
+        "error": null,
+        "matched": [
+          true,
+          false,
+          false,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "results": [
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            }
+          },
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-002"
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-001"
+              }
+            }
+          },
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-003"
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-001"
+              },
+              "DEC-003": {
+                "exceptions": [],
+                "id": "DEC-003",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-002"
+              }
+            }
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            }
+          }
+        ],
+        "status": "FAIL"
+      },
+      "sha": "47c1a977317346738acc31c95e56c95388000c83"
+    },
+    "exception": {
+      "observation": {
+        "error": null,
+        "matched": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "results": [
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            }
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            }
+          }
+        ],
+        "status": "PASS"
+      },
+      "sha": "c7ad26aec8178a16181323ede276f23f18595b79"
+    },
+    "good": {
+      "observation": {
+        "error": null,
+        "matched": [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ],
+        "results": [
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            }
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "exception": "ValueError",
+            "outcome": "raised"
+          },
+          {
+            "outcome": "returned",
+            "serializable": true,
+            "value": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            }
+          }
+        ],
+        "status": "PASS"
+      },
+      "sha": "78237b8325739ce64c9ea01327eab58424c362bc"
+    }
+  },
+  "check_digest": "d48bfca072140705ecade524235a78946e2edad27521e95bd0cf2a5287ada5bf",
+  "check_id": "CHK-001",
+  "decision_digest": "487559e9bb5932baa5bbc90e43e35bbd0bb5b38f40d6d67eac9e84553529c58e",
+  "draft_digest": "4f24cd1f3067bf00ee475509fb4d4b3de82fc9d5f4b493a0bff46dc410663e90",
+  "eligible": true,
+  "input_digest": "011fee83d2458205e0c610afe0ea11f908b15dded01a9628e6282333ef983ba5",
+  "model": null,
+  "proposal": {
+    "adapter_version": "python_function_v1",
+    "attempts": [
+      {
+        "attempt": 1,
+        "result": "manual_input"
+      }
+    ],
+    "capture_source_sha": null,
+    "captured_at": null,
+    "check": {
+      "adapter": "python_function_v1",
+      "assertions": [
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            ]
+          ],
+          "expect": {
+            "returns": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              "DEC-002": {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            }
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-002"
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-001"
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-003"
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": "DEC-001"
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-003",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-002"
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "superseded",
+                "supersedes": null
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-003",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-009"
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              },
+              {
+                "exceptions": [],
+                "id": "DEC-002",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": "DEC-001"
+              }
+            ]
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            []
+          ],
+          "expect": {
+            "raises": "ValueError"
+          }
+        },
+        {
+          "args": [
+            [
+              {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            ]
+          ],
+          "expect": {
+            "returns": {
+              "DEC-001": {
+                "exceptions": [],
+                "id": "DEC-001",
+                "rule": "r",
+                "schema_version": 1,
+                "scope": "src/x.py",
+                "status": "active",
+                "supersedes": null
+              }
+            }
+          }
+        }
+      ],
+      "citations": [
+        {
+          "decision_id": "DEC-002",
+          "quote": "must reject the whole decision graph with ValueError"
+        }
+      ],
+      "decision_id": "DEC-002",
+      "id": "CHK-001",
+      "rationale": "Cycles, competing or dangling successors, duplicates and empty graphs must be rejected so no check runs against an ambiguous decision history.",
+      "scenario": {
+        "function": "validate_decisions",
+        "path": "ddg/contracts.py"
+      },
+      "schema_version": 1,
+      "supersedes": "DEC-001"
+    },
+    "decision": {
+      "exceptions": [
+        "Error message wording may change; only the ValueError type is part of the contract."
+      ],
+      "id": "DEC-002",
+      "rule": "validate_decisions must reject the whole decision graph with ValueError when it has a supersession cycle, competing active successors, a missing superseded decision, a duplicate id, an active decision with an active successor, or no records. A valid single-parent chain is returned keyed by id.",
+      "schema_version": 1,
+      "scope": "ddg/contracts.py",
+      "status": "active",
+      "supersedes": "DEC-001"
+    },
+    "draft_digest": "4f24cd1f3067bf00ee475509fb4d4b3de82fc9d5f4b493a0bff46dc410663e90",
+    "input_digest": "011fee83d2458205e0c610afe0ea11f908b15dded01a9628e6282333ef983ba5",
+    "model": null,
+    "proposal_mode": "manual",
+    "provider_response": null,
+    "request_metadata": null,
+    "sdk_version": null,
+    "source_sha": "78237b8325739ce64c9ea01327eab58424c362bc"
+  },
+  "proposal_mode": "manual",
+  "schema_version": 1,
+  "sdk_version": null,
+  "source_sha": "78237b8325739ce64c9ea01327eab58424c362bc",
+  "validated_at": "2026-10-13T04:26:08Z"
+}
