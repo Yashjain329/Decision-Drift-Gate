@@ -168,7 +168,7 @@ def validate_decisions(records: list[dict]) -> dict[str, dict]:
         current: str | None = start
         while current is not None:
             if current in seen:
-                raise ValueError("Decision supersession cycle detected")
+                raise ValueError("Decision records form a supersession cycle")
             seen.add(current)
             current = by_id[current]["supersedes"]
     return by_id
