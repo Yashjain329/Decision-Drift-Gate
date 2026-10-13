@@ -1,0 +1,9 @@
+{
+  "exceptions": [],
+  "id": "DEC-001",
+  "rule": "Decision records are accepted when each record is valid on its own.",
+  "schema_version": 1,
+  "scope": "ddg/contracts.py",
+  "status": "superseded",
+  "supersedes": null
+}

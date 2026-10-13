@@ -1,0 +1,11 @@
+{
+  "exceptions": [
+    "Error message wording may change; only the ValueError type is part of the contract."
+  ],
+  "id": "DEC-002",
+  "rule": "validate_decisions must reject the whole decision graph with ValueError when it has a supersession cycle, competing active successors, a missing superseded decision, a duplicate id, an active decision with an active successor, or no records. A valid single-parent chain is returned keyed by id.",
+  "schema_version": 1,
+  "scope": "ddg/contracts.py",
+  "status": "active",
+  "supersedes": "DEC-001"
+}
