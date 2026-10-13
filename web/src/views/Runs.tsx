@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { Columns } from '@/components/Chart';
 import { Icon } from '@/components/Icon';
 import { View } from '@/components/Shell';
-import { Assertions, Empty, EnumLine, Evidence, ExitChip, OutcomeTag, PageHead, Result, Sha } from '@/components/ui';
+import { Assertions, CaseMatrix, Empty, EnumLine, Evidence, ExitChip, OutcomeTag, PageHead, Result, Sha } from '@/components/ui';
 import {
-  expectedJobs, headLabel, jobsOf, obsText, OUTCOMES, outcomeOf, overall, plural, realChecks, scenarioId, SIGNATURE,
+  expectedJobs, headLabel, isFunctionCheck, refLabel, isReadOnly, jobsOf, obsText, OUTCOMES, outcomeOf, overall, plural, realChecks, scenarioId, SIGNATURE,
   statusTone, VERDICT_TEXT, type Tone,
 } from '@/lib/model';
 import { useDdg, useDdgState } from '@/lib/store';
@@ -56,7 +56,10 @@ function Detail({ report, c }: { report: Report; c: CheckResult | null }) {
           {decision ? <><span className="mono dec-id">{decision.id}</span>{` ${decision.rule ?? 'rule not recorded'}`}</> : 'Governing decision not in the report.'}
         </p>
         <div className="detail-chart">
-          {c ? (
+          {c && isFunctionCheck(c.check) ? (
+            <CaseMatrix check={c.check} id="detail-cases" label="Assertion cases on base and head"
+              columns={[{ label: 'Base', obs: c.base }, { label: 'Head', obs: c.head }]} />
+          ) : c ? (
             <Columns
               columns={[
                 { label: 'Base', note: obsText(c.base), jobs: jobsOf(c.base), tone: statusTone(c.base) },
@@ -82,12 +85,21 @@ function EvidenceStack({ report, c }: { report: Report; c: CheckResult | null })
 
   return (
     <div className="evidence-stack" aria-label="Evidence">
+      {isFunctionCheck(c?.check) ? (
+        <Evidence id="ev-traces" title="Observed results" open meta={c ? `base ${obsText(c.base)} · head ${obsText(c.head)}` : '—'}>
+          <div className="side-by-side">
+            <div><p className="side-title side-base">Base</p><p id="detail-base" className={`side-result ${isTone(statusTone(c?.base))}`}>{obsText(c?.base)}</p>{c?.base?.error ? <p className="small muted">{c.base.error}</p> : null}</div>
+            <div><p className="side-title side-head">Head</p><p id="detail-head" className={`side-result ${isTone(statusTone(c?.head))}`}>{obsText(c?.head)}</p>{c?.head?.error ? <p className="small muted">{c.head.error}</p> : null}</div>
+          </div>
+        </Evidence>
+      ) : (
       <Evidence id="ev-traces" title="Service traces" open meta={c ? `base ${plural(eventCount(c.base), 'event')} · head ${plural(eventCount(c.head), 'event')}` : '—'}>
         <div className="side-by-side">
           <div><p className="side-title side-base">Base</p><p id="detail-base" className={`side-result ${isTone(statusTone(c?.base))}`}>{obsText(c?.base)}</p><Trace obs={c?.base} /></div>
           <div><p className="side-title side-head">Head</p><p id="detail-head" className={`side-result ${isTone(statusTone(c?.head))}`}>{obsText(c?.head)}</p><Trace obs={c?.head} /></div>
         </div>
       </Evidence>
+      )}
       <Evidence id="detail-diff-block" title="Change in scope" meta={diff ? `+${add} −${del}` : 'no change in scope'}>
         <pre id="detail-diff" className="code-block diff" tabIndex={0} aria-label="Diff of files in the check scope">{diff || 'No change to files in the check scope.'}</pre>
       </Evidence>
@@ -131,7 +143,7 @@ export default function Runs() {
 
   // keep the user's pick while it still exists; otherwise follow the scenario of the latest run
   const scenario = scenarios.some((x) => x.id === picked) ? picked : scenarioId(report, scenarios) ?? scenarios[0]?.id ?? '';
-  const locked = busy || !s.approval || !scenarios.length;
+  const locked = busy || isReadOnly(s) || !s.approval || !scenarios.length;
 
   const checks = realChecks(report);
   const current = checks.find((c) => c.check_id === selected) ?? checks.find((c) => c.verdict !== 'CHECK_PASSED') ?? checks[0] ?? null;
@@ -146,7 +158,7 @@ export default function Runs() {
       <div className="panel run-toolbar">
         <label className="field-label" htmlFor="scenario-select">Candidate head</label>
         <select id="scenario-select" name="scenario" value={scenario} disabled={locked} onChange={(e) => setPicked(e.target.value)}>
-          {scenarios.length ? scenarios.map((x) => <option key={x.id} value={x.id}>{x.label || x.id}</option>) : <option value="">Approve a check first</option>}
+          {scenarios.length ? scenarios.map((x) => <option key={x.id} value={x.id}>{x.label || x.id}</option>) : <option value="">{isReadOnly(s) ? 'Read-only: run with the ddg CLI' : 'Approve a check first'}</option>}
         </select>
         <button className="button button-primary" id="run-button" type="button" disabled={locked} aria-busy={busy}
           onClick={() => { if (scenario) void act('run', { scenario }); }}>
@@ -165,7 +177,7 @@ export default function Runs() {
           </div>
 
           <div className="revpair revpair-run">
-            <div className="rev rev-base"><span className="rev-role"><Icon name="lock" />Base · trusted</span><span id="run-base-ref" className="rev-ref">{report.base_ref || 'base'}</span><Sha sha={report.base_sha} /></div>
+            <div className="rev rev-base"><span className="rev-role"><Icon name="lock" />Base · trusted</span><span id="run-base-ref" className="rev-ref">{refLabel(report.base_ref) || 'base'}</span><Sha sha={report.base_sha} /></div>
             <Icon name="arrow" className="ic rev-arrow" />
             <div className="rev rev-head"><span className="rev-role"><Icon name="box" />Head · untrusted</span><span id="run-head-ref" className="rev-ref">{headLabel(s)}</span><Sha sha={report.head_sha} /></div>
             <div className="rev rev-sandbox">

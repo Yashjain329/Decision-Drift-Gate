@@ -1,4 +1,4 @@
-"""Local-only HTTP boundary for the browser demo."""
+"""Local-only HTTP boundary for the browser viewer: interactive for the demo, read-only for real repositories."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .approval import approve, validate_draft, verify_bundle
-from .gitio import list_at, read_at
+from .gitio import list_at, read_at, resolve_commit
 from .proposal import load_context, propose
 from .report import is_stale
 
@@ -134,6 +134,34 @@ def _initial_state(repo: Path, metadata: dict) -> dict:
     return state
 
 
+def _repository_state(repo: Path, base_sha: str, report: dict | None) -> dict:
+    """Read-only view of a real repository: its approved bundle at base and, optionally, one saved run report."""
+    state = {
+        "mode": None, "lifecycle": "decision_changed", "old_decision": None,
+        "new_decision": None, "draft": None, "validation": None, "approval": None,
+        "report": None, "report_stale": False, "scenarios": [], "busy": False,
+    }
+    bundle = _load_approved(repo, {"approved_base": base_sha})
+    if bundle:
+        check, decision, validation, approval_record = bundle
+        state.update({"lifecycle": "approved", "new_decision": decision, "draft": validation["proposal"],
+                      "mode": validation["proposal"].get("proposal_mode"),
+                      "validation": validation, "approval": approval_record})
+        try:
+            state["old_decision"] = load_context(repo, decision["id"], base_sha, check["adapter"])["old_decision"]
+        except (ValueError, TypeError, KeyError):
+            pass
+    if report is not None:
+        if not isinstance(report, dict) or not isinstance(report.get("checks"), list):
+            raise ValueError("Report must be a ddg run JSON report")
+        report = copy.deepcopy(report)
+        # A CLI report names commits, not refs: it is stale here when those commits are not in this repository.
+        report["base_ref"], report["head_ref"] = report.get("base_sha"), report.get("head_sha")
+        is_stale(repo, report, report["base_ref"], report["head_ref"])  # rejects non-canonical SHAs
+        state.update({"report": report, "lifecycle": "reviewed"})
+    return state
+
+
 def _scenario_list(refs: dict) -> list[dict[str, str]]:
     if not isinstance(refs, dict) or not isinstance(refs.get("approved_base"), str):
         return []
@@ -219,16 +247,30 @@ def _load_saved_state(server: ThreadingHTTPServer, metadata: dict) -> None:
         return
 
 
-def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTTPServer:
-    """Create a loopback-only server and safely hydrate its non-secret session state."""
+def create_server(repo: Path, state_dir: Path, port: int = 8765, base: str | None = None,
+                  report: dict | None = None) -> ThreadingHTTPServer:
+    """Create a loopback-only server and safely hydrate its non-secret session state.
+
+    A generated demo (with its .ddg-demo.json marker) is interactive. Any other Git repository is shown
+    read-only: the approved bundle at `base` (default HEAD) and, optionally, one saved `ddg run` report.
+    """
     repo = Path(repo).expanduser().resolve()
     state_dir = Path(state_dir).expanduser().resolve()
     if not repo.is_dir():
-        raise ValueError("Demo repository directory does not exist")
+        raise ValueError("Repository directory does not exist")
     _state_dir_safe(repo, state_dir)
-    metadata = _json_read(repo / ".ddg-demo.json")
-    if metadata.get("repo") != str(repo) or not isinstance(metadata.get("refs"), dict):
-        raise ValueError("Generated-demo marker does not match repository")
+    demo = (repo / ".ddg-demo.json").is_file()
+    if demo:
+        if base is not None or report is not None:
+            raise ValueError("--base and --report apply only to repositories without a demo marker")
+        metadata = _json_read(repo / ".ddg-demo.json")
+        if metadata.get("repo") != str(repo) or not isinstance(metadata.get("refs"), dict):
+            raise ValueError("Generated-demo marker does not match repository")
+        source = {"kind": "demo", "repo": repo.name, "base_sha": None}
+    else:
+        base_sha = resolve_commit(repo, base or "HEAD")
+        source = {"kind": "repository", "repo": repo.name, "base_sha": base_sha}
+        initial = _repository_state(repo, base_sha, report)
     state_dir.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
     project_root = Path(__file__).resolve().parents[1]
@@ -329,6 +371,7 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                     base_ref = state["report"].get("base_ref")
                     head_ref = state["report"].get("head_ref")
                     state["report_stale"] = is_stale(repo, state["report"], base_ref, head_ref)
+                state["source"] = source
                 self._json(200, {"state": state})
                 return
             asset = _static_asset(web_dir, path)
@@ -378,6 +421,11 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                 self._json(403, {"error": "Session token is missing or invalid"})
                 return
             path = self._path()
+            if not demo:
+                self._discard_body()
+                self._json(403, {"error": "This repository is read-only here. Use the ddg CLI to propose, "
+                                          "validate, approve and run checks."})
+                return
             if path not in {"/api/propose", "/api/validate", "/api/approve", "/api/run"}:
                 self._discard_body()
                 self._json(404, {"error": "Not found"})
@@ -396,7 +444,7 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
                 next_state["busy"] = False
                 _persist(self.server, next_state)
                 self.server.ddg_state = next_state
-                self._json(200, {"state": next_state})
+                self._json(200, {"state": {**next_state, "source": source}})
             except _RequestError as exc:
                 self._json(exc.status, {"error": str(exc)})
             except ValueError as exc:
@@ -492,8 +540,11 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765) -> ThreadingHTT
     server.ddg_state_dir = state_dir
     server.ddg_token = token
     server.mutation_lock = threading.Lock()
-    server.ddg_state = _initial_state(repo, metadata)
-    _load_saved_state(server, metadata)
+    if demo:
+        server.ddg_state = _initial_state(repo, metadata)
+        _load_saved_state(server, metadata)
+    else:
+        server.ddg_state = initial
     return server
 
 

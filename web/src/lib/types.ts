@@ -16,7 +16,9 @@ export interface Decision {
   schema_version?: number;
 }
 
-export interface Assertion { metric?: string; equals?: unknown }
+/** python_job_client_v1 uses metric/equals; python_function_v1 uses args/expect. */
+export interface Assertion { metric?: string; equals?: unknown; args?: unknown[]; expect?: { returns?: unknown; raises?: string } }
+export interface FunctionScenario { path?: string; function?: string }
 export interface Citation { decision_id: string; quote: string }
 
 export interface Check {
@@ -24,7 +26,7 @@ export interface Check {
   decision_id?: string;
   supersedes?: string | null;
   adapter?: string;
-  scenario?: string;
+  scenario?: string | FunctionScenario;
   rationale?: string;
   assertions?: Assertion[];
   citations?: Citation[];
@@ -48,6 +50,9 @@ export interface Observation {
   returned_job_exists?: boolean;
   error?: string | null;
   events?: ServiceEvent[];
+  /** python_function_v1: one result and one match flag per assertion. */
+  results?: { outcome?: string; value?: unknown; exception?: string }[];
+  matched?: boolean[];
 }
 
 export interface Draft {
@@ -140,6 +145,8 @@ export interface DdgState {
   report_stale?: boolean;
   scenarios?: Scenario[];
   busy?: boolean;
+  /** demo: interactive generated demo; repository: a real repository, shown read-only. */
+  source?: { kind?: 'demo' | 'repository'; repo?: string; base_sha?: string | null };
 }
 
 export type Route = 'propose' | 'validate' | 'approve' | 'run';

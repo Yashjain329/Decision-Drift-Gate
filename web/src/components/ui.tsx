@@ -1,8 +1,8 @@
 // Shared primitives. Every tone is paired with a glyph and a word; nothing renders colour alone.
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
-import { outcomeOf, short, type Glyph, type Overall, type Tone } from '@/lib/model';
-import type { Check } from '@/lib/types';
+import { caseText, functionName, outcomeOf, short, type Glyph, type Overall, type Tone } from '@/lib/model';
+import type { Check, Observation } from '@/lib/types';
 
 export function Tag({ tone = 'muted', glyph, children, title, id }: { tone?: Tone; glyph?: Glyph | null; children: ReactNode; title?: string; id?: string }) {
   return <span className={`tag tag-${tone}`} title={title} id={id}>{glyph ? <Icon name={glyph} /> : null}{children}</span>;
@@ -64,15 +64,48 @@ export function PageHead({ crumb, title, lede, aside, id }: { crumb: string; tit
   );
 }
 
-/** Approved-check assertions as `expect metric == value` lines. */
+/** Approved-check assertions: `expect metric == value` (job client) or `expect fn(args) returns|raises x` (function). */
 export function Assertions({ check, className = 'code-block', label }: { check?: Check | null; className?: string; label?: string }) {
   const list = Array.isArray(check?.assertions) ? check.assertions : [];
+  const fn = functionName(check);
   return (
-    <pre className={className} aria-label={label}>
+    <pre className={className} aria-label={label} tabIndex={0}>
       {list.length ? list.map((a, i) => (
-        <span key={i}>{i ? '\n' : ''}<span className="kw">expect </span>{`${a.metric || 'unknown'} == `}<span className="num">{a.equals === undefined ? 'unset' : JSON.stringify(a.equals)}</span></span>
+        <span key={i}>{i ? '\n' : ''}<span className="kw">expect </span>{a.expect
+          ? caseText(a, fn, 48)
+          : <>{`${a.metric || 'unknown'} == `}<span className="num">{a.equals === undefined ? 'unset' : JSON.stringify(a.equals)}</span></>}</span>
       )) : '—'}
     </pre>
+  );
+}
+
+/** Function checks: one row per assertion and one pass/fail cell per observed revision. Unobserved cells stay "not observed". */
+export function CaseMatrix({ check, columns, label, id }: { check?: Check | null; columns: { label: string; obs?: Observation | null }[]; label: string; id?: string }) {
+  const list = Array.isArray(check?.assertions) ? check.assertions : [];
+  const fn = functionName(check);
+  const cell = (obs: Observation | null | undefined, i: number) => {
+    const hit = obs?.status !== 'ERROR' && Array.isArray(obs?.matched) ? obs.matched[i] : undefined;
+    const r = Array.isArray(obs?.results) ? obs.results[i] : undefined;
+    const got = r ? (r.outcome === 'raised' ? `raised ${r.exception ?? '?'}` : r.outcome === 'returned' ? `returned ${JSON.stringify(r.value)}` : r.outcome ?? '') : '';
+    return hit === true ? <span className="cm is-pass" title={got}><Icon name="check" />pass</span>
+      : hit === false ? <span className="cm is-fail" title={got}><Icon name="x" />fail</span>
+        : <span className="cm is-inc"><Icon name="minus" />not observed</span>;
+  };
+  return (
+    <div className="case-matrix" tabIndex={0} role="region" aria-label={label} id={id}>
+      <table className="matrix">
+        <thead><tr><th scope="col">#</th><th scope="col">Expectation</th>{columns.map((c) => <th scope="col" key={c.label}>{c.label}</th>)}</tr></thead>
+        <tbody>
+          {list.length ? list.map((a, i) => (
+            <tr key={i}>
+              <td className="mono">{i + 1}</td>
+              <td className="mono case-call" title={caseText(a, fn, 4000)}>{caseText(a, fn, 28)}</td>
+              {columns.map((c) => <td key={c.label}>{cell(c.obs, i)}</td>)}
+            </tr>
+          )) : <tr><td colSpan={2 + columns.length}>No assertions recorded.</td></tr>}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

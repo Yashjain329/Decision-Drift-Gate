@@ -62,6 +62,23 @@ export const focusCheck = (report?: Report | null): CheckResult | undefined => {
   return checks.find((c) => c.verdict !== 'CHECK_PASSED') ?? checks[0];
 };
 
+/** A real repository is shown read-only: records come from Git, actions run through the ddg CLI. */
+export const isReadOnly = (s?: DdgState | null): boolean => s?.source?.kind === 'repository';
+/** Job-client scenarios are a name; function scenarios are {path, function}. */
+export const scenarioText = (s?: Check['scenario']): string =>
+  !s ? '—' : typeof s === 'string' ? s : `${s.path ?? '?'} · ${s.function ?? '?'}()`;
+/** python_function_v1 checks assert on calls, not on jobs: they get a per-case view instead of job columns. */
+export const isFunctionCheck = (check?: Check | null): boolean =>
+  check?.adapter === 'python_function_v1' || (typeof check?.scenario === 'object' && check.scenario !== null);
+const brief = (v: unknown, n: number): string => { const s = JSON.stringify(v) ?? 'undefined'; return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
+/** One function assertion as `fn(args) returns x` / `fn(args) raises E`, each JSON value cut to `n` characters. */
+export const caseText = (a: NonNullable<Check['assertions']>[number], fn: string, n = 60): string =>
+  `${fn}(${(a.args ?? []).map((v) => brief(v, n)).join(', ')}) ${a.expect && 'raises' in a.expect ? `raises ${String(a.expect.raises)}` : `returns ${brief(a.expect?.returns, n)}`}`;
+export const functionName = (check?: Check | null): string =>
+  typeof check?.scenario === 'object' && check.scenario?.function ? check.scenario.function : 'function';
+/** Function-adapter observations: how many assertion cases matched. */
+export const casesOf = (obs?: Observation | null): { matched: number; total: number } | null =>
+  Array.isArray(obs?.matched) ? { matched: obs.matched.filter(Boolean).length, total: obs.matched.length } : null;
 export const jobsOf = (obs?: Observation | null): number | null =>
   obs && obs.status !== 'ERROR' && Number.isInteger(obs.unique_jobs) ? (obs.unique_jobs as number) : null;
 export const statusTone = (obs?: Observation | null): Tone =>
@@ -69,7 +86,7 @@ export const statusTone = (obs?: Observation | null): Tone =>
 export const obsText = (obs?: Observation | null): string =>
   !obs?.status ? 'not observed'
     : obs.status === 'ERROR' ? 'ERROR · not observed'
-      : `${obs.status}${Number.isInteger(obs.unique_jobs) ? ` · ${plural(obs.unique_jobs as number, 'job')}` : ''}`;
+      : `${obs.status}${Number.isInteger(obs.unique_jobs) ? ` · ${plural(obs.unique_jobs as number, 'job')}` : casesOf(obs) ? ` · ${casesOf(obs)!.matched} of ${casesOf(obs)!.total} cases` : ''}`;
 export const expectedJobs = (check?: Check | null): number | null => {
   const found = (check?.assertions ?? []).find((a) => a.metric === 'unique_jobs');
   return found && Number.isInteger(found.equals) ? (found.equals as number) : null;
@@ -108,11 +125,14 @@ export function scenarioId(report: Report | null | undefined, scenarios: Scenari
   const id = HEAD_ALIASES[head] ?? head;
   return scenarios.some((s) => s.id === id) ? id : null;
 }
+/** A ref name as written; a bare 40-hex SHA (CLI reports name commits, not refs) is shortened. */
+export const refLabel = (ref?: string | null): string | undefined => (ref && /^[0-9a-f]{40}$/.test(ref) ? short(ref) : ref ?? undefined);
 export const headLabel = (state: DdgState): string => {
   const report = state.report;
   const scenarios = state.scenarios ?? [];
   const id = scenarioId(report, scenarios);
-  return scenarios.find((s) => s.id === id)?.label ?? report?.head_ref ?? 'head';
+  const ref = report?.head_ref;
+  return scenarios.find((s) => s.id === id)?.label ?? refLabel(ref) ?? 'head';
 };
 
 export const proposalLabel = (state: DdgState): string => {
@@ -137,7 +157,7 @@ export function attentionItems(state: DdgState): AttentionItem[] {
     const checks = realChecks(report);
     if (state.report_stale === true) out.push({ tone: 'inc', glyph: 'clock', title: 'Report is stale.', href: 'runs', link: 'Rerun' });
     checks.filter((c) => c.verdict === 'VIOLATION_INTRODUCED').forEach((c) =>
-      out.push({ tone: 'fail', glyph: 'x', title: `${c.decision?.id ?? c.check?.decision_id ?? 'Decision'} regressed`, text: `on ${report.head_ref ?? 'head'}.`, href: 'runs', link: 'Inspect evidence' }));
+      out.push({ tone: 'fail', glyph: 'x', title: `${c.decision?.id ?? c.check?.decision_id ?? 'Decision'} regressed`, text: `on ${headLabel(state)}.`, href: 'runs', link: 'Inspect evidence' }));
     checks.filter((c) => c.verdict === 'NOT_CHECKED').forEach((c) =>
       out.push({ tone: 'inc', glyph: 'help', title: `${c.check_id} not checked.`, text: c.error ?? c.head?.error ?? c.base?.error ?? '', href: 'runs', link: 'See reason' }));
     if (m.tone === 'inc' && !checks.some((c) => c.verdict === 'NOT_CHECKED')) out.push({ tone: 'inc', glyph: 'help', title: 'Run incomplete.', text: m.summary, href: 'runs', link: 'See warnings' });

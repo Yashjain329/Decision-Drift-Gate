@@ -1,7 +1,7 @@
 'use client';
 import type { ReactNode } from 'react';
 import { Icon } from './Icon';
-import { overall, realChecks, short, type Glyph, type Tone } from '@/lib/model';
+import { isReadOnly, overall, realChecks, short, type Glyph, type Tone } from '@/lib/model';
 import { useDdg } from '@/lib/store';
 import type { DdgState, ViewId } from '@/lib/types';
 
@@ -25,9 +25,9 @@ export function Topbar() {
         <span className="brand-name">Decision Drift Gate</span>
       </a>
       <div className="workspace" aria-label="Repository">
-        <span className="ws-label">Local workspace</span>
-        <span className="ws-repo"><Icon name="git" /><span>demo repository</span></span>
-        <span className="ws-meta mono">{report ? `${report.base_ref ?? 'base'} @ ${short(report.base_sha, 7)}` : s.approval ? 'approved base' : 'no approved base'}</span>
+        <span className="ws-label">{isReadOnly(s) ? 'Repository · read-only' : 'Local workspace'}</span>
+        <span className="ws-repo"><Icon name="git" /><span>{isReadOnly(s) ? s.source?.repo || 'repository' : 'demo repository'}</span></span>
+        <span className="ws-meta mono">{isReadOnly(s) ? `records @ ${short(s.source?.base_sha ?? undefined, 7)}` : report ? `${report.base_ref ?? 'base'} @ ${short(report.base_sha, 7)}` : s.approval ? 'approved base' : 'no approved base'}</span>
       </div>
       <dl className="readouts">
         <Readout label="Latest run" value={report ? m.word : 'no run yet'} t={report ? m.tone : null} />

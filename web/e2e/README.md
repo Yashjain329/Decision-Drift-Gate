@@ -20,6 +20,7 @@ Docker Desktop must be running for the default mode. Tests are offline: the live
 | `scenarios.spec.ts` | all 12 candidate heads run through the UI; result, exit code, verdict, warnings, reason and isolation must equal the engine's report, and the known engine contract table |
 | `edge.spec.ts` | engine stops mid-session, engine unreachable at load, malformed state, forged session token (403), double click, stale refs and rerun, host isolation, offline live-provider failure, second tab, proposal-source persistence |
 | `state-variants.spec.ts` | states the demo cannot produce, made by altering the real `/api/state` response: failed calibration, unverifiable approver, unknown verdict and aggregate, missing fields, several checks and selection, no checks, hostile text rendered as text |
+| `repository.spec.ts` | `ddg serve` on a real repository (no demo marker) with an approved `python_function_v1` check and a saved report: read-only shell and notice, no proposal or run controls, per-case calibration and base/head matrices, verified approver, engine refuses actions even with the token, phone widths, axe scan of Check Studio and Runs |
 | `responsive-a11y.spec.ts` | seven widths from 360 to 1920 px without sideways scroll, 44 px touch targets on phones, keyboard navigation and focus ring, reduced motion, landmarks and labelled charts, axe WCAG 2.1 A/AA scan of every view and the shell |
 
 Every test also fails on any browser console error, page error or failed request unless the test deliberately provokes it.

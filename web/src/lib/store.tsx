@@ -3,15 +3,16 @@
 // per-tab run history. Views read it with useDdg(); only act() talks to the engine.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { fetchState, post, type RouteBody } from './api';
-import { expectedJobs, focusCheck, headLabel, jobsOf, overall } from './model';
-import type { DdgState, Route, ViewId } from './types';
+import { casesOf, expectedJobs, focusCheck, headLabel, isFunctionCheck, isReadOnly, jobsOf, overall } from './model';
+import type { CheckResult, DdgState, Route, ViewId } from './types';
 
 export const VIEWS: ViewId[] = ['overview', 'decisions', 'checks', 'runs', 'approvals', 'reports', 'settings'];
 const ALIASES: Record<string, ViewId> = { decision: 'decisions', approval: 'approvals', review: 'runs' };
 const HISTORY_KEY = 'ddg-session-runs';
 
-export interface RunRecord { id: string; at: string; label: string; aggregate: string; verdict: string | null; jobs: number | null; expected: number | null }
-export interface Notice { text: string; kind: 'error' | 'success' | 'pending' | 'warn' }
+/** `jobs` holds jobs created on head, or for function checks (`unit: 'case'`) the failing cases on head. */
+export interface RunRecord { id: string; at: string; label: string; aggregate: string; verdict: string | null; jobs: number | null; expected: number | null; unit?: 'job' | 'case' }
+export interface Notice { text: string; kind: 'error' | 'success' | 'pending' | 'warn' | 'info' }
 
 interface Store {
   state: DdgState | null;
@@ -53,10 +54,16 @@ function recordRun(state: DdgState): RunRecord[] {
   const id = `${report.run_at}|${report.head_ref}|${report.head_sha}`;
   if (history.some((h) => h.id === id)) return history;
   const check = focusCheck(report);
-  history.push({ id, at: report.run_at, label: headLabel(state), aggregate: String(report.aggregate ?? ''), verdict: check?.verdict ?? null, jobs: jobsOf(check?.head), expected: expectedJobs(check?.check) });
+  history.push({ id, at: report.run_at, label: headLabel(state), aggregate: String(report.aggregate ?? ''), verdict: check?.verdict ?? null, ...measure(check) });
   const kept = history.slice(-16);
   try { sessionStorage.setItem(HISTORY_KEY, JSON.stringify(kept)); } catch { /* storage disabled: chart shows what it has */ }
   return kept;
+}
+
+function measure(check?: CheckResult): Pick<RunRecord, 'jobs' | 'expected' | 'unit'> {
+  if (!isFunctionCheck(check?.check)) return { jobs: jobsOf(check?.head), expected: expectedJobs(check?.check), unit: 'job' };
+  const cases = check?.head?.status === 'ERROR' ? null : casesOf(check?.head);
+  return { jobs: cases ? cases.total - cases.matched : null, expected: 0, unit: 'case' };
 }
 
 const PENDING: Record<Route, (body: unknown) => string> = {
@@ -97,14 +104,17 @@ export function DdgProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchState()
-      .then((s) => { accept(s); setConnected(true); })
+      .then((s) => {
+        accept(s); setConnected(true);
+        if (isReadOnly(s)) setNotice({ kind: 'info', text: 'Read-only view of a repository. Records come from Git; propose, validate, approve and run with the ddg CLI.' });
+      })
       .catch((e: unknown) => setNotice({ text: e instanceof Error ? e.message : 'Could not connect to the local engine.', kind: 'error' }));
   }, [accept]);
 
   const go = useCallback((v: ViewId) => { if (location.hash !== `#${v}`) location.hash = v; else setView(v); }, []);
 
   const act = useCallback(async <R extends Route>(route: R, body: RouteBody[R]) => {
-    if (busy) return;
+    if (busy || isReadOnly(state)) return;
     setBusy(true);
     setNotice({ text: PENDING[route](body), kind: 'pending' });
     try {
@@ -123,7 +133,7 @@ export function DdgProvider({ children }: { children: ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [busy, accept]);
+  }, [busy, accept, state]);
 
   const value = useMemo<Store>(() => ({ state, connected, busy, notice, view, history, go, act }), [state, connected, busy, notice, view, history, go, act]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

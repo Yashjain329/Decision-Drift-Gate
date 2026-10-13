@@ -228,6 +228,8 @@ def _parser() -> argparse.ArgumentParser:
     serve.add_argument("--repo", required=True, type=Path)
     serve.add_argument("--state-dir", required=True, type=Path)
     serve.add_argument("--port", type=int, default=8765)
+    serve.add_argument("--base", help="real repositories only: commit whose approved .ddg records to show (default HEAD)")
+    serve.add_argument("--report", type=Path, help="real repositories only: a ddg run JSON report to show")
     return parser
 
 
@@ -332,7 +334,8 @@ def _execute(args: argparse.Namespace) -> int:
             from .web import create_server
         except ImportError as exc:
             raise ValueError("Local browser interface is not installed") from exc
-        server = create_server(repo, args.state_dir, port=args.port)
+        report = _read_boundary(str(args.report)) if args.report else None
+        server = create_server(repo, args.state_dir, port=args.port, base=args.base, report=report)
         try:
             address, port = server.server_address[:2]
             print(_json_output({"serving": f"http://{address}:{port}"}), flush=True)

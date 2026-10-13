@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import { View } from '@/components/Shell';
 import { Columns } from '@/components/Chart';
-import { Assertions, Evidence, Json, PageHead, Tag } from '@/components/ui';
-import { FIXTURES, expectedJobs, fixturesMatched, jobsOf, plural, proposalLabel, statusTone } from '@/lib/model';
+import { Assertions, CaseMatrix, Evidence, Json, PageHead, Tag } from '@/components/ui';
+import { FIXTURES, casesOf, expectedJobs, isFunctionCheck, fixturesMatched, jobsOf, isReadOnly, plural, proposalLabel, scenarioText, statusTone } from '@/lib/model';
 import { useDdg } from '@/lib/store';
 import type { Check } from '@/lib/types';
 
@@ -20,7 +20,7 @@ export default function CheckStudio() {
   const draft = s.draft;
   const check = draft?.check ?? null;
   const v = s.validation;
-  const approved = Boolean(s.approval);
+  const approved = Boolean(s.approval) || isReadOnly(s);
   const draftSource: Source | undefined = draft?.proposal_mode === 'live' || draft?.proposal_mode === 'recorded' ? draft.proposal_mode : undefined;
   const [picked, setPicked] = useState<Source | null>(null);
   const source: Source = picked ?? draftSource ?? 'recorded';
@@ -46,12 +46,14 @@ export default function CheckStudio() {
 
       <div className="grid">
         <article className="panel span-12 proposal-bar">
+          {isReadOnly(s) ? <p className="muted small">Proposals for this repository come from <code>ddg propose</code>; this view only reads them.</p> : <>
           <label className="field-label" htmlFor="proposal-mode">Proposal source</label>
           <select id="proposal-mode" name="proposal-mode" value={source} disabled={busy || approved} onChange={(e) => setPicked(e.target.value === 'live' ? 'live' : 'recorded')}>
             <option value="recorded">Recorded proposal</option>
             <option value="live">Live proposal (provider)</option>
           </select>
           <button className="button button-secondary" id="propose-button" type="button" disabled={busy || approved} onClick={() => void act('propose', { mode: source })}>Draft proposal</button>
+          </>}
           <p className="source-line">
             <Tag tone={draft?.proposal_mode === 'live' ? 'pre' : 'muted'}>{draft ? proposalLabel(s) : 'No proposal loaded'}</Tag>
             <span id="proposal-provenance" className="muted">{provenance}</span>
@@ -63,7 +65,7 @@ export default function CheckStudio() {
           <Assertions check={check} className="code-block code-lg" label="Check assertions" />
           <dl className="kv">
             <div><dt>Decision</dt><dd id="check-decision">{check ? `${check.decision_id ?? 'not recorded'}${check.supersedes ? ` (supersedes ${check.supersedes})` : ''}` : '—'}</dd></div>
-            <div><dt>Scenario</dt><dd id="check-scenario" className="mono">{check?.scenario || '—'}</dd></div>
+            <div><dt>Scenario</dt><dd id="check-scenario" className="mono">{scenarioText(check?.scenario)}</dd></div>
             <div><dt>Adapter</dt><dd id="check-adapter" className="mono">{check?.adapter || draft?.adapter_version || '—'}</dd></div>
           </dl>
           <details className="inline-details"><summary>Why this check</summary><p id="check-rationale" className="body-copy">{check?.rationale || 'Draft a proposal first.'}</p></details>
@@ -79,7 +81,7 @@ export default function CheckStudio() {
 
         <article className="panel span-5" aria-labelledby="matrix-title">
           <div className="panel-head"><h2 id="matrix-title">Calibration matrix</h2><Tag tone={vTone} glyph={vGlyph}>{v ? (v.eligible ? 'Eligible' : 'Needs work') : 'Not run'}</Tag></div>
-          {v ? (
+          {v && !isFunctionCheck(check) ? (
             <Columns
               columns={columns} expected={expectedJobs(check)} stacked colW={52} gap={34} unit={34} padB={50} notes={false}
               className="chart chart-compact"
@@ -88,7 +90,7 @@ export default function CheckStudio() {
           ) : null}
           <div className="table-wrap">
             <table className="matrix">
-              <thead><tr><th scope="col">Fixture</th><th scope="col">Expected</th><th scope="col">Observed</th><th scope="col">Jobs</th><th scope="col"><span className="sr-only">Eligibility</span></th></tr></thead>
+              <thead><tr><th scope="col">Fixture</th><th scope="col">Expected</th><th scope="col">Observed</th><th scope="col">{isFunctionCheck(check) ? 'Cases' : 'Jobs'}</th><th scope="col"><span className="sr-only">Eligibility</span></th></tr></thead>
               <tbody id="matrix-body">
                 {FIXTURES.map((f) => {
                   const c = v?.cases?.[f.key];
@@ -99,7 +101,7 @@ export default function CheckStudio() {
                       <td title={c?.sha ?? ''}>{f.name}</td>
                       <td className="mono">{statusWord(f.expect)}</td>
                       <td className="mono">{statusWord(obs?.status)}</td>
-                      <td className="mono">{jobsOf(obs) ?? '—'}</td>
+                      <td className="mono">{isFunctionCheck(check) ? (casesOf(obs) ? `${casesOf(obs)!.matched}/${casesOf(obs)!.total}` : '—') : jobsOf(obs) ?? '—'}</td>
                       <td>{!v ? <Tag>Not run</Tag> : <Tag tone={ok ? 'pass' : 'fail'} glyph={ok ? 'check' : 'x'}>{ok ? 'Valid' : 'Mismatch'}</Tag>}</td>
                     </tr>
                   );
@@ -115,6 +117,16 @@ export default function CheckStudio() {
             onClick={() => { if (draft?.draft_digest) void act('validate', { draft_digest: draft.draft_digest }); }}
           >Validate proposal</button>
         </article>
+
+        {v && isFunctionCheck(check) ? (
+          <article className="panel span-12" aria-labelledby="cases-title">
+            <div className="panel-head"><h2 id="cases-title">Calibration cases</h2><span className="muted small">each assertion on each fixture</span></div>
+            <CaseMatrix
+              check={check} id="calibration-cases" label="Calibration cases per fixture"
+              columns={FIXTURES.map((f) => ({ label: f.short, obs: v.cases?.[f.key]?.observation }))}
+            />
+          </article>
+        ) : null}
       </div>
       <Evidence title="Draft and provider provenance (JSON)"><Json value={draft} /></Evidence>
       <Evidence title="Validation evidence (JSON)"><Json value={v} /></Evidence>
