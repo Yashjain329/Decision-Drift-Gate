@@ -5,7 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { View } from '@/components/Shell';
 import { Icon } from '@/components/Icon';
 import { PageHead, Tag } from '@/components/ui';
-import { clock, fixturesMatched, orText, realChecks, short, SIGNATURE, type Glyph, type Tone } from '@/lib/model';
+import { clock, isReadOnly, fixturesMatched, orText, realChecks, short, SIGNATURE, type Glyph, type Tone } from '@/lib/model';
 import { useDdg } from '@/lib/store';
 
 type StepClass = 'is-done' | 'is-current' | 'is-failed' | '';
@@ -34,7 +34,7 @@ export default function Approvals() {
   const who = s.report ? realChecks(s.report)[0]?.approver : undefined;
   const commit = who?.commits?.[0];
   const matched = fixturesMatched(s);
-  const canApprove = !busy && v?.eligible === true && !ap && Boolean(draft?.draft_digest) && reviewer.trim() !== '' && reason.trim() !== '';
+  const canApprove = !busy && !isReadOnly(s) && v?.eligible === true && !ap && Boolean(draft?.draft_digest) && reviewer.trim() !== '' && reason.trim() !== '';
 
   const [stateWord, stateTone, stateGlyph]: [string, Tone, Glyph | null] = who?.verified ? ['Verified', 'pass', 'check']
     : who ? ['Unverifiable', 'fail', 'x']

@@ -5,7 +5,7 @@ import { Icon } from '@/components/Icon';
 import { View } from '@/components/Shell';
 import { EnumLine, ExitChip, PageHead, Result, Sha, Tag } from '@/components/ui';
 import {
-  AGGREGATE_LABEL, OUTCOMES, attentionItems, clock, fixturesMatched, focusCheck, headLabel, outcomeOf, overall, plural, realChecks,
+  AGGREGATE_LABEL, OUTCOMES, attentionItems, clock, fixturesMatched, focusCheck, headLabel, outcomeOf, overall, plural, realChecks, refLabel,
 } from '@/lib/model';
 import { useDdg, type RunRecord } from '@/lib/store';
 
@@ -25,7 +25,7 @@ function HistoryChart({ history }: { history: RunRecord[] }) {
   }));
   while (cols.length < 12) cols.push({ placeholder: true });
   const expected = history.map((h) => h.expected).find((e): e is number => Number.isInteger(e)) ?? null;
-  const label = `Runs this session: ${history.map((h) => `${h.label} ${AGGREGATE_LABEL[h.aggregate] ?? h.aggregate}${h.jobs === null ? ', not observed' : `, ${plural(h.jobs, 'job')}`}`).join('; ')}`;
+  const label = `Runs this session: ${history.map((h) => `${h.label} ${AGGREGATE_LABEL[h.aggregate] ?? h.aggregate}${h.jobs === null ? ', not observed' : `, ${plural(h.jobs, h.unit === 'case' ? 'failing case' : 'job')}`}`).join('; ')}`;
   return <Columns id="history-chart" columns={cols} expected={expected} stacked={false} colW={34} gap={48} unit={38} label={label} />;
 }
 
@@ -76,7 +76,7 @@ export default function Overview() {
           </div>
           {report ? (
             <div id="latest-body" className="revpair">
-              <div className="rev rev-base"><span className="rev-role"><Icon name="lock" />Base · trusted</span><span id="ov-base-ref" className="rev-ref">{report.base_ref || 'base'}</span><Sha sha={report.base_sha} /></div>
+              <div className="rev rev-base"><span className="rev-role"><Icon name="lock" />Base · trusted</span><span id="ov-base-ref" className="rev-ref">{refLabel(report.base_ref) || 'base'}</span><Sha sha={report.base_sha} /></div>
               <Icon name="arrow" className="ic rev-arrow" />
               <div className="rev rev-head"><span className="rev-role"><Icon name="box" />Head · untrusted</span><span id="ov-head-ref" className="rev-ref">{headLabel(s)}</span><Sha sha={report.head_sha} /></div>
             </div>
@@ -122,7 +122,7 @@ export default function Overview() {
         <article className="panel stat span-3"><p className="stat-label">Runs this session</p><p id="st-runs" className="stat-value">{history.length}</p><p id="st-runs-note" className="stat-note">{last ? `last ${clock(last.at)} UTC` : 'this tab only'}</p></article>
 
         <article className="panel span-12" aria-labelledby="history-title">
-          <div className="panel-head"><h2 id="history-title">Runs this session</h2><span className="muted small">jobs created on head</span></div>
+          <div className="panel-head"><h2 id="history-title">Runs this session</h2><span className="muted small">{history.at(-1)?.unit === 'case' ? 'failing cases on head' : 'jobs created on head'}</span></div>
           <HistoryChart history={history} />
           <ul className="legend" aria-label="Legend">
             <li><span className="key key-pass" />Passed</li><li><span className="key key-fail" />Violation</li>

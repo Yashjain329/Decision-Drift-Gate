@@ -37,14 +37,9 @@ export interface EngineState {
 
 export const sandboxMode = (): Sandbox => (process.env.DDG_SANDBOX as Sandbox | undefined) ?? 'docker';
 
-export async function startDemo(opts: { sandbox?: Sandbox; approve?: boolean; scenario?: string; env?: Record<string, string> } = {}): Promise<Demo> {
-  const sandbox = opts.sandbox ?? sandboxMode();
-  const work = mkdtempSync(path.join(tmpdir(), 'ddg-ui-e2e-'));
-  const repo = path.join(work, 'demo');
-  const env = { ...process.env, DDG_SANDBOX: sandbox, PYTHONPATH: REPO_ROOT, PYTHONUTF8: '1', ...opts.env };
-  execFileSync(PYTHON, ['-m', 'ddg', 'demo-init', '--destination', repo], { cwd: REPO_ROOT, env, stdio: 'pipe' });
-
-  const child: ChildProcess = spawn(PYTHON, ['-m', 'ddg', 'serve', '--repo', repo, '--state-dir', path.join(work, 'state'), '--port', '0'],
+/** Start `ddg serve` for `repo` (extra args appended), read its URL and session token, and wrap the engine API. */
+async function serve(work: string, repo: string, sandbox: Sandbox, env: NodeJS.ProcessEnv, extra: string[] = []): Promise<Demo> {
+  const child: ChildProcess = spawn(PYTHON, ['-m', 'ddg', 'serve', '--repo', repo, '--state-dir', path.join(work, 'state'), '--port', '0', ...extra],
     { cwd: REPO_ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
   const stderr: string[] = [];
   child.stderr?.on('data', (d: Buffer) => stderr.push(d.toString()));
@@ -81,6 +76,17 @@ export async function startDemo(opts: { sandbox?: Sandbox; approve?: boolean; sc
     },
   };
 
+  return demo;
+}
+
+export async function startDemo(opts: { sandbox?: Sandbox; approve?: boolean; scenario?: string; env?: Record<string, string> } = {}): Promise<Demo> {
+  const sandbox = opts.sandbox ?? sandboxMode();
+  const work = mkdtempSync(path.join(tmpdir(), 'ddg-ui-e2e-'));
+  const repo = path.join(work, 'demo');
+  const env = { ...process.env, DDG_SANDBOX: sandbox, PYTHONPATH: REPO_ROOT, PYTHONUTF8: '1', ...opts.env };
+  execFileSync(PYTHON, ['-m', 'ddg', 'demo-init', '--destination', repo], { cwd: REPO_ROOT, env, stdio: 'pipe' });
+
+  const demo = await serve(work, repo, sandbox, env);
   if (opts.approve || opts.scenario) await approveViaApi(demo);
   if (opts.scenario) await demo.post('run', { scenario: opts.scenario });
   return demo;
@@ -94,4 +100,16 @@ export async function approveViaApi(demo: Demo): Promise<void> {
   const validated = await demo.post('validate', { draft_digest: digest });
   if (!validated.validation?.eligible) throw new Error('recorded proposal was not eligible');
   await demo.post('approve', { draft_digest: digest, reviewer: 'E2E Reviewer', reason: 'Reviewed recorded calibration' });
+}
+
+/** A real repository (no demo marker): approved function check, regressing head, saved `ddg run` report.
+ * The viewer serves it read-only. Calibration and the run use the suite's sandbox mode. */
+export async function startRepository(opts: { report?: boolean } = {}): Promise<Demo & { base: string; head: string }> {
+  const work = mkdtempSync(path.join(tmpdir(), 'ddg-ui-e2e-repo-'));
+  const sandbox = sandboxMode();
+  const env = { ...process.env, DDG_SANDBOX: sandbox, DDG_ALLOW_UNVERIFIED_APPROVERS: '', PYTHONPATH: REPO_ROOT, PYTHONUTF8: '1' };
+  const out = execFileSync(PYTHON, [path.join(__dirname, 'build_repo.py'), work], { cwd: REPO_ROOT, env, encoding: 'utf8' });
+  const built = JSON.parse(out.trim().split(/\r?\n/).pop() ?? '{}') as { repo: string; report: string; base: string; head: string };
+  const demo = await serve(work, built.repo, sandbox, env, opts.report === false ? [] : ['--report', built.report]);
+  return { ...demo, base: built.base, head: built.head };
 }

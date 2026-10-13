@@ -74,6 +74,10 @@ Every command below is exercised by `tests/test_cli_real.py` on a repository wit
 
 7. **Run.** `ddg run --repo <repo> --base <base> --head <head> --out report.json`. The base commit supplies the checks, decisions and approver list. The head commit supplies only the code under test. Add `--sandbox docker|podman|host|auto` to choose isolation and `--format json|md|both` for the report files (default both).
 
+8. **View it in the browser (optional).** `ddg serve --repo <repo> --state-dir <dir> [--base <rev>] [--report report.json]` opens a read-only view of the approved checks at `--base` (default `HEAD`) and, if given, one saved `ddg run` report. Function checks show each assertion as a row, with a pass or fail cell per revision. Nothing can be proposed, validated, approved or run from the browser for a real repository; the engine refuses those requests, and the CLI stays the only way to change records. A report whose commits are not in the repository is shown as stale.
+
+New to DDG? [Try it](docs/TRY_IT.md) walks through the demo, a live proposal with your Claude Code or Codex login, and a first check on your own repository.
+
 Upgrading from the earlier prototype? See [docs/UPGRADING.md](docs/UPGRADING.md).
 
 ## Use it in GitHub Actions
