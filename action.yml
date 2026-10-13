@@ -38,6 +38,11 @@ runs:
         HEAD: ${{ inputs.head-ref }}
         SANDBOX: ${{ inputs.sandbox }}
       run: |
+        if [ -z "$BASE" ] || [ -z "$HEAD" ]; then
+          echo "::error::ddg: base-ref and head-ref are empty. Outside a pull_request event, pass both inputs."
+          echo "exit-code=3" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
         set +e
         ddg run --repo . --base "$BASE" --head "$HEAD" --out ddg-report.json --sandbox "$SANDBOX"
         echo "exit-code=$?" >> "$GITHUB_OUTPUT"

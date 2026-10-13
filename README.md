@@ -2,7 +2,7 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status (12 October 2026, `master`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The test suite has **370 tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has been tested offline only; it has not run on GitHub.
+**Status (13 October 2026, `master`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The test suite has **370 tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has run on GitHub: on a private test repository and on this repository, which gates itself with an approved check (see [This repository gates itself](#this-repository-gates-itself)).
 
 ![The review screen after a regression: FAILED, exit code 1. One slab of jobs for the target, two for the candidate, against the check's expected 1](evidence/ui-obsidian-review-failed.png)
 
@@ -92,7 +92,11 @@ jobs:
       - uses: ./        # inside this repository; from another repository use <owner>/<repo>@<ref> once published
 ```
 
-Inputs: `base-ref`, `head-ref` (default: the PR base and head SHAs), `sandbox` (default `docker`), `python-version` (default `3.12`), `fail-on-incomplete` (default `true`), `post-comment` (default `true`). Exit code 1 fails the job; exit code 2 fails it unless `fail-on-incomplete` is `false`; any other code is an error. A fixture workflow is in `.github/workflows/ddg.yml`. Do not run it on fork code in a workflow that has secrets. Not yet verified on GitHub itself: the comment posting and the check conclusion.
+Inputs: `base-ref`, `head-ref` (default: the PR base and head SHAs), `sandbox` (default `docker`), `python-version` (default `3.12`), `fail-on-incomplete` (default `true`), `post-comment` (default `true`). Exit code 1 fails the job; exit code 2 fails it unless `fail-on-incomplete` is `false`; any other code is an error. A fixture workflow is in `.github/workflows/ddg.yml`. Do not run it on fork code in a workflow that has secrets. Verified on GitHub (13 October 2026): FAILED, PASSED_CHECKS and INCOMPLETE pull requests each got the expected job result and one PR comment, with the Docker sandbox. Outside a pull request event, pass `base-ref` and `head-ref` yourself.
+
+## This repository gates itself
+
+`.ddg/` on `master` holds an approved check, `CHK-001`, for decision `DEC-002`: `validate_decisions` in `ddg/contracts.py` must reject a decision history that has a cycle, competing or missing predecessors, duplicate ids or no records. It was calibrated in Docker against three commits (cycle detection removed: fails; current code: passes; reworded error message, an allowed exception: passes) and approved by the listed approver. Every pull request to this repository runs it through `.github/workflows/ddg.yml`. A pull request that edits `.ddg/` ends INCOMPLETE until the policy change is reviewed on the base branch.
 
 ## Adapters
 
@@ -101,9 +105,9 @@ An adapter says what a check can observe. The id is part of the approval digest.
 | Adapter | What it checks | Proposal source |
 |---|---|---|
 | `python_job_client_v1` | `submit_job(service, payload, operation_id)` in `src/job_client.py` against a fake service that can fail after creating a job | Model (recorded or live, any provider) or manual |
-| `python_function_v1` | One function in one stdlib-only module: return value or exception type for given JSON arguments (up to 50 cases) | Manual only. Model proposals refuse this adapter |
+| `python_function_v1` | One function in one Python module that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`: return value or exception type for given JSON arguments (up to 50 cases) | Manual only. Model proposals refuse this adapter |
 
-Both adapters run a single stdlib-only Python file. See [architecture](docs/ARCHITECTURE.md).
+Both adapters run a single Python file that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`. See [architecture](docs/ARCHITECTURE.md).
 
 ## Model providers
 
@@ -191,7 +195,7 @@ Container tests skip with a visible reason when no runtime exists. The tamper su
 ## Limitations
 
 - **Model drafting covers one adapter.** Only `python_job_client_v1` accepts model proposals. `python_function_v1` checks are written by hand.
-- **Target code is one stdlib-only module.** Both adapters run a single Python file that imports only the standard library. They do not understand arbitrary repositories, packages or all engineering decisions.
+- **Target code is one stdlib-only module.** Both adapters run a single Python file that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`. Most application modules do not qualify; move the rule's logic into a pure module to check it. They do not understand arbitrary repositories, packages or all engineering decisions.
 - **The container is the security boundary, not the verdict's proof.** It limits network, filesystem writes, memory, CPU, processes and privilege for the host. It does not stop kernel or runtime escapes, and the static import screen is best-effort only. A revision under test can still return fabricated results for its own function, so DDG catches accidental regressions, not a determined malicious author. Read the [threat model](docs/THREAT_MODEL.md).
 - **Identity depends on your Git setup.** Author email is forgeable unless `require_signed` is true and signing keys are configured. A malicious approver or a compromised base branch is out of scope.
 - **Repositories must be ordinary SHA-1 Git repositories with full history.** SHA-256 repositories are rejected, shallow clones fail closed for approval history, and symlinks or submodules under `.ddg/` or at the checked source path make the run INCOMPLETE or NOT_CHECKED. Very large diffs are truncated for display only.

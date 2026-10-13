@@ -113,7 +113,7 @@ class ActionTests(unittest.TestCase):
         action = (ROOT / "action.yml").read_text(encoding="utf-8")
         for needle in ("using: composite", "base-ref:", "head-ref:", "sandbox:", "default: docker", "python-version:",
                        "fail-on-incomplete:", "ddg run --repo .", "--sandbox", "upload-artifact", "ddg-report.json",
-                       "pr_comment.py", "exit 1"):
+                       "pr_comment.py", "exit 1", "base-ref and head-ref are empty"):
             self.assertIn(needle, action)
         self.assertNotIn("${{ inputs", action.split("run: |")[1].split("- name: Render")[0])
         workflow = (ROOT / ".github" / "workflows" / "ddg.yml").read_text(encoding="utf-8")

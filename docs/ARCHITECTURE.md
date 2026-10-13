@@ -46,7 +46,7 @@ All Git reads go through `ddg/gitio.py`. Every call disables repository-local co
 | Adapter | Module | Observes |
 |---|---|---|
 | `python_job_client_v1` | `ddg/adapters/job_client.py`, runs `ddg/harness.py` | Jobs created and returned by `submit_job` in `src/job_client.py` against a fake service |
-| `python_function_v1` | `ddg/adapters/python_function.py`, runs `ddg/worker_function.py` | Return value or exception type of one named function in one stdlib-only module, for JSON arguments (up to 50 cases) |
+| `python_function_v1` | `ddg/adapters/python_function.py`, runs `ddg/worker_function.py` | Return value or exception type of one named function in one Python module that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`, for JSON arguments (up to 50 cases) |
 
 Model proposals support only `python_job_client_v1`. Checks for `python_function_v1` are written by hand. For `python_function_v1` the observation is the function's own output, so it detects accidental regressions but cannot detect a revision that fabricates the expected answers.
 
