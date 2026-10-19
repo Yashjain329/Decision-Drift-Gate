@@ -1,6 +1,10 @@
 # Changelog
 
-All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version 0.1.0 is the first tagged release (`v0.1.0`). It is not published to PyPI. Install it from the repository or from the tag.
+All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version 0.1.0 is the first tagged release (`v0.1.0`). It is not published to PyPI. Install it from the tag or from the wheel on the [release page](https://github.com/Yashjain329/Decision-Drift-Gate/releases/tag/v0.1.0).
+
+## [Unreleased]
+
+Nothing yet.
 
 ## [0.1.0] - 2026-10-19
 
@@ -66,3 +70,6 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ## History before this changelog
 
 The synthetic-demo prototype (110 tests, 15 acceptance cases) is described in [docs/phases/STATUS.md](docs/phases/STATUS.md).
+
+[Unreleased]: https://github.com/Yashjain329/Decision-Drift-Gate/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Yashjain329/Decision-Drift-Gate/releases/tag/v0.1.0
