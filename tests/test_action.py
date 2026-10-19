@@ -58,6 +58,29 @@ class ActionTests(unittest.TestCase):
         self.assertIn("UNVERIFIED" if not report["checks"][0]["approver"].get("verified") else "verified",
                       pr_comment.render(report))
 
+    def test_sandbox_image_is_recorded_and_rendered(self):
+        report = next(iter(self.real.values()))
+        image = report["sandbox_image"]
+        self.assertEqual(set(image), {"image", "pinned"})
+        if report["sandbox"] in ("docker", "podman"):
+            self.assertTrue(image["image"])
+        pinned = self._synthetic("PASSED_CHECKS", sandbox="docker",
+                                 sandbox_image={"image": "python:3.12-slim@sha256:" + "a" * 64, "pinned": True})
+        self.assertIn("(digest-pinned)", pr_comment.render(pinned))
+        loose = self._synthetic("PASSED_CHECKS", sandbox="docker", sandbox_image={"image": "python:3.12-slim", "pinned": False})
+        self.assertIn("NOT digest-pinned", pr_comment.render(loose))
+        hostile = self._synthetic("PASSED_CHECKS", sandbox="docker", sandbox_image={"image": "x`<img src=x>`", "pinned": False})
+        self.assertNotIn("<img", pr_comment.render(hostile))
+        self.assertNotIn("image", pr_comment.render(self._synthetic("PASSED_CHECKS", sandbox="host", sandbox_image={"image": None, "pinned": False})).split("Base:")[0].split("Sandbox:")[1])
+
+    def test_markdown_report_names_the_image(self):
+        from ddg.report import _markdown
+        base = next(iter(self.real.values()))
+        self.assertIn("(digest-pinned)", _markdown({**base, "sandbox_image": {"image": "img@sha256:" + "b" * 64, "pinned": True}}))
+        self.assertIn("NOT digest-pinned", _markdown({**base, "sandbox_image": {"image": "img:tag", "pinned": False}}))
+        self.assertIn("**Sandbox image:** none (no container)", _markdown({**base, "sandbox_image": {"image": None, "pinned": False}}))
+        self.assertIn("**Sandbox image:** not recorded", _markdown({k: v for k, v in base.items() if k != "sandbox_image"}))
+
     def test_approver_evidence_rendering(self):
         report = self._synthetic("PASSED_CHECKS", sandbox="docker")
         report["checks"] = [dict(report["checks"][0], approver={"verified": True, "commits": [
@@ -113,7 +136,8 @@ class ActionTests(unittest.TestCase):
         action = (ROOT / "action.yml").read_text(encoding="utf-8")
         for needle in ("using: composite", "base-ref:", "head-ref:", "sandbox:", "default: docker", "python-version:",
                        "fail-on-incomplete:", "ddg run --repo .", "--sandbox", "upload-artifact", "ddg-report.json",
-                       "pr_comment.py", "exit 1", "base-ref and head-ref are empty"):
+                       "pr_comment.py", "exit 1", "base-ref and head-ref are empty", "sandbox-image:",
+                       'export DDG_SANDBOX_IMAGE="$IMAGE"'):
             self.assertIn(needle, action)
         self.assertNotIn("${{ inputs", action.split("run: |")[1].split("- name: Render")[0])
         workflow = (ROOT / ".github" / "workflows" / "ddg.yml").read_text(encoding="utf-8")

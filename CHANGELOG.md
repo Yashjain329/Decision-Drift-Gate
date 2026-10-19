@@ -1,10 +1,16 @@
 # Changelog
 
-All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). There is no tagged release yet, so everything is under Unreleased. The package version in `ddg/__init__.py` is `0.1.0`.
+All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version 0.1.0 is the first tagged release (`v0.1.0`). It is not published to PyPI. Install it from the repository or from the tag.
 
-## [Unreleased] (`master`, 12 October 2026)
+## [0.1.0] - 2026-10-19
 
 ### Added
+
+- **Release packaging.** The wheel installs only the `ddg` package. The built viewer and the recorded capture install inside it as `ddg/_viewer` and `ddg/_evidence`, so no generic `web` or `evidence` package lands in site-packages. `ddg.viewer_dir()` and `ddg.recorded_capture()` use the installed copy and fall back to the source checkout. `tests/test_packaging.py` builds the wheel offline and checks the layout.
+- **Sandbox image in reports.** Each report has `sandbox_image` (the image, and whether it is digest-pinned). The Markdown report and the PR comment show it. The Action input `sandbox-image` sets `DDG_SANDBOX_IMAGE`.
+- **SBOM.** `sbom/viewer.cdx.json` (CycloneDX 1.5) lists the npm packages of the viewer. Regenerate it with `npm run sbom` in `web/`. The Python package has no runtime dependencies.
+- **Self-gating.** This repository has an approved check (`.ddg/`, CHK-001 on `validate_decisions`), and its pull requests run it through the Action.
+- **Developer guide.** `docs/TRY_IT.md`: the demo, a live proposal through Claude Code or Codex, a first check on your own repository, and how to report results.
 
 - **Browser viewer for real repositories.** `ddg serve` on a repository without the demo marker opens a read-only view: the approved bundle at `--base` (default `HEAD`) and an optional saved report (`--report`). Every action request is refused with 403; the UI hides or locks its controls and says to use the CLI. `python_function_v1` checks get a per-case matrix (one row per assertion, pass or fail per revision) in Check Studio and the Run Inspector instead of the job-count charts, and the session chart counts failing cases on head. Covered by `tests/test_web_repository.py` and `web/e2e/repository.spec.ts`.
 - **UI end-to-end suite** (`web/e2e/`, Playwright). 76 tests against real `ddg serve` instances in Docker and host modes: routing, the full UI lifecycle, all 12 scenarios checked against the engine report, edge cases (engine down, forged token, double submit, stale refs, host isolation, provider failure), altered-state honesty checks, seven breakpoints, keyboard, reduced motion and an axe WCAG 2.1 A/AA scan. Fixes found by it: legacy hash aliases are rewritten to the canonical view; the session chart keeps its id once populated; scrollable JSON and diff blocks are keyboard-focusable; zero-count outcomes meet contrast; a run without a recorded isolation mode reads "not recorded" instead of "no run yet".
@@ -16,7 +22,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - **Model providers** (`ddg/providers/`): `gemini_api`, `anthropic_api`, `openai_api` (and any OpenAI-compatible server), `bedrock` (Bedrock API key or boto3), `claude_cli`, `codex_cli` (subscription logins) and `custom_cli` (any command). `DDG_PROVIDER` / `--provider`, `DDG_MODEL` / `--model`, `DDG_PROVIDER_TIMEOUT`, and `ddg providers`. Drafts record provider, model, client version and the timeout used. See [docs/PROVIDERS.md](docs/PROVIDERS.md).
 - **CLI for real repositories.** `ddg init`; `validate --calibration-bad/--calibration-good/--calibration-exception`; `propose --adapter`; `approve` without `--commit-demo` (writes three files and prints the paths); `run --sandbox` and `run --format json|md|both`; exit code 3 for usage and infrastructure errors.
 - **Packaging.** `pyproject.toml` with a `ddg` console script, optional extras `[ai]` and `[bedrock]`, and a `Dockerfile` for a digest-pinned sandbox image.
-- **GitHub Action** (`action.yml`, `scripts/pr_comment.py`, `.github/workflows/ddg.yml`). Runs `ddg run` on a pull request, uploads the report, upserts one PR comment, and maps the exit code to the job result. Tested offline against real reports; not yet run on GitHub.
+- **GitHub Action** (`action.yml`, `scripts/pr_comment.py`, `.github/workflows/ddg.yml`). Runs `ddg run` on a pull request, uploads the report, upserts one PR comment, and maps the exit code to the job result. Verified on GitHub on 13 October 2026 with FAILED, PASSED_CHECKS and INCOMPLETE pull requests.
 - **Edge-case hardening.**
   - Git: hostile repository config (fsmonitor, hooks, pagers, external diff, textconv, gpg programs) no longer runs; symlinks, submodules and directories are never followed; shallow clones fail closed; merge history is walked with `--full-history`; SHA-256 repositories are rejected with a clear error; diffs are capped at 200 KB for display; a force-pushed or rebased approval by another author is rejected; an unreadable approver policy is an error, not "no policy".
   - Records: length caps on ids, rules, exceptions, rationale and quotes; NUL and lone surrogates rejected; no Unicode normalization; decision text embedded in prompts only as escaped JSON data; Markdown code fences always longer than any backticks they contain; environment variables with secret-looking names redacted from reports; report files written atomically.
@@ -48,8 +54,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - A revision under test can return fabricated results for its own function. DDG detects accidental regressions, not a determined malicious author.
 - The container timeout includes container start, so a loaded runner can produce a false NOT_CHECKED.
 - Secret redaction in reports works on serialized text and can miss values that contain quotes or backslashes.
-- `web` and `evidence` install as top-level packages next to `ddg`.
-- Not built: SBOM, an Action input to pin the image digest, browser (Playwright) tests, AI proposals for the function adapter, a hosted service.
+- The default sandbox image is the `python:3.12-slim` tag, not a digest. Reports mark it as not pinned. Pin it with `sandbox-image` or `DDG_SANDBOX_IMAGE`.
+- The function adapter accepts only modules that import no process, file or network modules.
+- Not built: PyPI publishing, AI proposals for the function adapter, adapters for other languages, a hosted service.
+- No human evaluation and no measured review-time saving.
 
 ### Documentation
 

@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from . import recorded_capture, viewer_dir
 from .approval import approve, validate_draft, verify_bundle
 from .gitio import list_at, read_at, resolve_commit
 from .proposal import load_context, propose
@@ -273,8 +274,8 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765, base: str | Non
         initial = _repository_state(repo, base_sha, report)
     state_dir.mkdir(parents=True, exist_ok=True)
     token = secrets.token_urlsafe(32)
-    project_root = Path(__file__).resolve().parents[1]
-    web_dir = (project_root / "web" / "out").resolve()
+    project_root = Path(__file__).resolve().parents[1]  # source checkout root, for its .env only
+    web_dir = viewer_dir().resolve()
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "DecisionDriftGate/1"
@@ -475,7 +476,7 @@ def create_server(repo: Path, state_dir: Path, port: int = 8765, base: str | Non
                 context = load_context(repo, revision=revision)
                 context["env_file"] = project_root / ".env"
                 if mode == "recorded":
-                    capture_path = project_root / "evidence" / "gemini-proposal.json"
+                    capture_path = recorded_capture()
                     context["capture"] = _json_read(capture_path)
                 draft = propose(context, mode=mode)
                 state.update({"mode": mode, "lifecycle": "proposed", "old_decision": context["old_decision"],

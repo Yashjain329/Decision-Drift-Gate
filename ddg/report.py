@@ -81,6 +81,12 @@ def _fence(language: str, value: Any) -> list[str]:
     return [fence + language, body, fence, ""]
 
 
+def _image_line(value) -> str:
+    if not isinstance(value, dict) or not value.get("image"):
+        return "none (no container)" if isinstance(value, dict) else "not recorded"
+    return f"`{_code(value['image'])}` ({'digest-pinned' if value.get('pinned') is True else 'NOT digest-pinned'})"
+
+
 def _markdown(report: dict) -> str:
     sandbox = report.get("sandbox")
     lines = [
@@ -92,6 +98,7 @@ def _markdown(report: dict) -> str:
         f"**Adapter:** {_inline(report.get('adapter_version'))}",
         f"**Isolation:** {_inline(sandbox if sandbox is not None else 'not recorded')}"
         + (" (UNSAFE: reviewed code ran on the host)" if sandbox == "host" else ""),
+        f"**Sandbox image:** {_image_line(report.get('sandbox_image'))}",
         f"**Run time (UTC):** {_inline(report.get('run_at'))}",
         "",
         "This report records approved-check observations for the two commits above.",

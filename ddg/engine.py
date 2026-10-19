@@ -241,6 +241,12 @@ def _sandbox_mode() -> str:
         return "unavailable"
 
 
+def _sandbox_image() -> dict:
+    """Which container image ran head code, and whether it is digest-pinned (None image on host/unavailable)."""
+    described = sandbox.describe()
+    return {"image": described["image"], "pinned": described["pinned"]}
+
+
 def compare(repo: Path, base: str, head: str) -> dict:
     """Compare two pinned revisions using only base's validated approved checks."""
     repo = Path(repo).expanduser().resolve()
@@ -340,6 +346,7 @@ def compare(repo: Path, base: str, head: str) -> dict:
         "adapter_version": ",".join(sorted(in_play)) or ADAPTER_VERSION,
         "ordinary_tests": ordinary_tests,
         "sandbox": _sandbox_mode(),
+        "sandbox_image": _sandbox_image(),
     }
 
 

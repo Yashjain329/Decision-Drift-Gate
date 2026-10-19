@@ -32,7 +32,7 @@ The local application does not provide a GitHub PR integration, arbitrary-reposi
 
 The text above describes the prototype. On `master` today:
 
-- The suite has **370 tests, all passing** in the last full run (host and Docker modes). The 15-case matrix was re-run in Docker mode on the final code with a freshly built demo and **matched 15 of 15**. The recorded matrix in the evidence index is from the earlier commit named there and is unchanged.
+- The Python suite has **383 tests, all passing** (3 skipped) and the browser suite 86 Playwright tests, all passing, in the last full run (19 October 2026, host and Docker modes). The 15-case matrix was re-run in Docker mode on the final code with a freshly built demo and **matched 15 of 15**. The recorded matrix in the evidence index is from the earlier commit named there and is unchanged.
 - Workers run in a container (network, filesystem writes, memory, CPU, processes and privilege are limited). The static import screen is best-effort. Neither makes the verdict trustworthy against a malicious author: a revision under test can still return fabricated results for its own function. See the [threat model](THREAT_MODEL.md).
 - The matrix uses the adapter `python_job_client_v1`. A second adapter, `python_function_v1`, is covered by `tests/test_adapters.py`, `tests/test_cli_real.py`, `tests/test_tamper.py` and `tests/e2e/`, not by the 15-case matrix.
 - Approver identity is checked from Git (allowlist, touched paths, optional signatures). A GitHub Action exists and is tested offline against real reports; it has not run on GitHub. A pull-request-review binding does not exist.

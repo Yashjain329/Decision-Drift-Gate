@@ -17,13 +17,18 @@ bedrock = ["boto3>=1.35"]
 ddg = "ddg:console_main"
 
 [tool.setuptools]
-# web/ and evidence/ are installed beside ddg/ because ddg/web.py and ddg/cli.py
-# resolve them as <parent of ddg>/web and <parent of ddg>/evidence.
-packages = ["ddg", "ddg.adapters", "ddg.providers", "web", "evidence"]
+# The built viewer (web/out) and the recorded capture install inside the ddg package as ddg/_viewer and
+# ddg/_evidence, so nothing generic lands at the top of site-packages. ddg.viewer_dir() and
+# ddg.recorded_capture() prefer those copies and fall back to the source checkout.
+packages = ["ddg", "ddg.adapters", "ddg.providers", "ddg._viewer", "ddg._evidence"]
+
+[tool.setuptools.package-dir]
+"ddg._viewer" = "web/out"
+"ddg._evidence" = "evidence"
 
 [tool.setuptools.dynamic]
 version = { attr = "ddg.__version__" }
 
 [tool.setuptools.package-data]
-web = ["out/**/*"]  # Next.js static export; build with `npm run build` in web/
-evidence = ["gemini-proposal.json"]
+"ddg._viewer" = ["**/*"]  # Next.js static export; build with `npm run build` in web/
+"ddg._evidence" = ["gemini-proposal.json"]

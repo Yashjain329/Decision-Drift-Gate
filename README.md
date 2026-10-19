@@ -2,7 +2,7 @@
 
 Turn changed engineering decisions into developer-approved checks that catch old behavior returning in new code.
 
-**Status (13 October 2026, `master`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The test suite has **370 tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has run on GitHub: on a private test repository and on this repository, which gates itself with an approved check (see [This repository gates itself](#this-repository-gates-itself)).
+**Status (19 October 2026, release `v0.1.0`):** a working tool with a CLI, a GitHub Action, a local browser demo and a container sandbox. The Python suite has **383 tests, all passing** (3 skipped: two Podman tests without Podman installed, one POSIX permission test on Windows) and the browser suite **86 Playwright tests, all passing** in the last full run (host and Docker modes; see [evaluation](docs/EVALUATION.md)). It has been run on one synthetic scenario and a few small test repositories. **No human evaluation has been done and no review-time saving has been measured.** The GitHub Action has run on GitHub: on a private test repository and on this repository, which gates itself with an approved check (see [This repository gates itself](#this-repository-gates-itself)).
 
 ![The review screen after a regression: FAILED, exit code 1. One slab of jobs for the target, two for the candidate, against the check's expected 1](evidence/ui-obsidian-review-failed.png)
 
@@ -26,6 +26,7 @@ Requirements: Python 3.10 or newer (declared in `pyproject.toml`; only 3.12 has 
 
 ```powershell
 python -m pip install .            # core: standard library only
+python -m pip install "git+https://github.com/Yashjain329/Decision-Drift-Gate@v0.1.0"  # the tagged release, without a clone
 python -m pip install ".[ai]"      # adds the Gemini SDK (only for the gemini_api provider)
 python -m pip install ".[bedrock]" # adds boto3 (only for the bedrock provider with AWS credentials)
 ddg --help                         # same as: python -m ddg --help
@@ -93,10 +94,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0, persist-credentials: false}
-      - uses: ./        # inside this repository; from another repository use <owner>/<repo>@<ref> once published
+      - uses: Yashjain329/Decision-Drift-Gate@v0.1.0   # or ./ inside this repository
 ```
 
-Inputs: `base-ref`, `head-ref` (default: the PR base and head SHAs), `sandbox` (default `docker`), `python-version` (default `3.12`), `fail-on-incomplete` (default `true`), `post-comment` (default `true`). Exit code 1 fails the job; exit code 2 fails it unless `fail-on-incomplete` is `false`; any other code is an error. A fixture workflow is in `.github/workflows/ddg.yml`. Do not run it on fork code in a workflow that has secrets. Verified on GitHub (13 October 2026): FAILED, PASSED_CHECKS and INCOMPLETE pull requests each got the expected job result and one PR comment, with the Docker sandbox. Outside a pull request event, pass `base-ref` and `head-ref` yourself.
+Inputs: `base-ref`, `head-ref` (default: the PR base and head SHAs), `sandbox` (default `docker`), `sandbox-image` (an image pinned by digest; empty uses the default `python:3.12-slim` tag, which the report marks as not pinned), `python-version` (default `3.12`), `fail-on-incomplete` (default `true`), `post-comment` (default `true`). Exit code 1 fails the job; exit code 2 fails it unless `fail-on-incomplete` is `false`; any other code is an error. A fixture workflow is in `.github/workflows/ddg.yml`. Do not run it on fork code in a workflow that has secrets. Verified on GitHub (13 October 2026): FAILED, PASSED_CHECKS and INCOMPLETE pull requests each got the expected job result and one PR comment, with the Docker sandbox. Outside a pull request event, pass `base-ref` and `head-ref` yourself.
 
 ## This repository gates itself
 
