@@ -26,12 +26,10 @@ EPILOG = """exit codes (ddg run):
   3  usage/infra    bad arguments, missing repo, unreadable file, no container runtime
 """
 
-try:  # resource_root() locates web/ and evidence/ in installed layouts; else use the checkout
-    from . import resource_root as _resource_root
-    PROJECT_ROOT = Path(_resource_root())
-except ImportError:
-    PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CAPTURE = PROJECT_ROOT / "evidence" / "gemini-proposal.json"
+from . import recorded_capture
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # source checkout root; its .env is a fallback only
+DEFAULT_CAPTURE = recorded_capture()
 
 
 def _configure_utf8() -> None:

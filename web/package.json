@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
     "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report playwright-report"
+    "test:e2e:report": "playwright show-report playwright-report",
+    "sbom": "npm sbom --sbom-format cyclonedx --omit dev --sbom-type application > ../sbom/viewer.cdx.json"
   },
   "dependencies": {
     "next": "16.4.0",

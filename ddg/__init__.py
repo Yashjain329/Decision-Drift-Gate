@@ -12,6 +12,16 @@ def console_main():
     raise SystemExit(main())
 
 
-def resource_root():
-    """Directory that contains ``web/`` and ``evidence/`` (repo root or site-packages)."""
-    return Path(__file__).resolve().parents[1]
+_HERE = Path(__file__).resolve().parent
+
+
+def viewer_dir() -> Path:
+    """The built browser viewer: ``ddg/_viewer`` when installed, ``web/out`` in a source checkout."""
+    installed = _HERE / "_viewer"
+    return installed if installed.is_dir() else _HERE.parent / "web" / "out"
+
+
+def recorded_capture() -> Path:
+    """The recorded model proposal used by ``--mode recorded``: installed copy first, then the checkout."""
+    installed = _HERE / "_evidence" / "gemini-proposal.json"
+    return installed if installed.is_file() else _HERE.parent / "evidence" / "gemini-proposal.json"

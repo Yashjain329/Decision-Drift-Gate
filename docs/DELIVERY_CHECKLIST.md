@@ -70,7 +70,7 @@ Preserve the behavioral runner, real AI proposal evidence, approval, valid excep
 
 The checklist above records the 4 October prototype. These facts changed:
 
-- The suite is now 370 tests, all passing in the last full run on `master` (12 October 2026; host and Docker modes), not 110. The 110-test run in 280.603 seconds remains the record for commit `c3feee81c6403361e449ec677accf97a7e27d899`. The 15-case matrix was re-run in Docker mode on the final code and matched 15 of 15.
+- The suite is now 383 Python tests (3 skipped) plus 86 Playwright browser tests, all passing in the last full run (19 October 2026, release `v0.1.0`; host and Docker modes), not 110. The 110-test run in 280.603 seconds remains the record for commit `c3feee81c6403361e449ec677accf97a7e27d899`. The 15-case matrix was re-run in Docker mode on the final code and matched 15 of 15.
 - "Local subprocess" is no longer the only execution mode. Workers run in a container by default; `DDG_SANDBOX=host` restores the old unsafe mode. See [threat model](THREAT_MODEL.md).
 - "Local reviewer attestation" is no longer enough for a check to run. The approval commit author must be in `.ddg/approvers.json` at base. A fresh demo needs the file that `demo-init` now writes. See [UPGRADING](UPGRADING.md).
 - Docker or Podman is now needed to run checks on a new machine, or `DDG_SANDBOX=host`. Recheck the presentation machine.

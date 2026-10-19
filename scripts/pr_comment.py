@@ -79,7 +79,10 @@ def render(report) -> str:
         lines += ["> **Warning:** sandbox mode was not recorded in this report.", ""]
     if aggregate not in CONCLUSIONS:
         lines += ["> Report is missing or malformed; treating as INCOMPLETE.", ""]
-    lines += [f"- **Sandbox:** `{esc(sandbox)}`",
+    image = report.get("sandbox_image") if isinstance(report.get("sandbox_image"), dict) else {}
+    lines += [f"- **Sandbox:** `{esc(sandbox)}`"
+              + (f" · image {code(image['image'], 160)} ({'digest-pinned' if image.get('pinned') is True else 'NOT digest-pinned'})"
+                 if image.get("image") else ""),
               f"- **Base:** `{esc(report.get('base_sha'), 40)}`",
               f"- **Head:** `{esc(report.get('head_sha'), 40)}`",
               f"- **Check conclusion:** {conclusion(report)}", ""]
