@@ -31,7 +31,7 @@ Proposal provenance records mode, provider, model, client version, time limit, c
 
 ## Bounded adapter
 
-The first adapter runs trusted synthetic `src/job_client.py` with `submit_job(service, payload, operation_id)`. The fake service can create a job before returning 503, or reject it before creating one. Checks observe unique jobs and whether the returned ID actually exists. Completion is mandatory: avoiding duplicates by abandoning the operation does not pass.
+The first adapter runs the module named by the governing decision's `scope` (`src/job_client.py` in the demo) with `submit_job(service, payload, operation_id)`. The fake service can create a job before returning 503, or reject it before creating one. Checks observe unique jobs and whether the returned ID actually exists. Completion is mandatory: avoiding duplicates by abandoning the operation does not pass.
 
 Each revision executes in a fresh worker with a fresh service and a timeout. Unsupported source, missing entrypoints, crashes and malformed child output are errors. Model credentials are excluded from child environments. The fake service and all recorded events live in the runner process; the worker reaches it only through a JSON-line proxy (`ddg/worker.py`), so the revision under test cannot edit the evidence (regression-tested in `tests/test_harness.py`). A static screen rejects filesystem, process and network modules and `open`/`eval`/`exec`. That screen is best-effort and is not a security boundary; the container (below) is.
 
@@ -45,7 +45,7 @@ All Git reads go through `ddg/gitio.py`. Every call disables repository-local co
 
 | Adapter | Module | Observes |
 |---|---|---|
-| `python_job_client_v1` | `ddg/adapters/job_client.py`, runs `ddg/harness.py` | Jobs created and returned by `submit_job` in `src/job_client.py` against a fake service |
+| `python_job_client_v1` | `ddg/adapters/job_client.py`, runs `ddg/harness.py` | Jobs created and returned by `submit_job` in the decision-scope module against a fake service |
 | `python_function_v1` | `ddg/adapters/python_function.py`, runs `ddg/worker_function.py` | Return value or exception type of one named function in one Python module that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`, for JSON arguments (up to 50 cases) |
 
 Model proposals support only `python_job_client_v1`. Checks for `python_function_v1` are written by hand. For `python_function_v1` the observation is the function's own output, so it detects accidental regressions but cannot detect a revision that fabricates the expected answers.

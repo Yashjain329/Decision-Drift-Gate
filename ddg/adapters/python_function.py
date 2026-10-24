@@ -21,6 +21,12 @@ _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PATH = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./-]*\.py$")
 
 
+def valid_module_path(path) -> bool:
+    """A relative, repo-internal .py path (no '..', no '//')."""
+    return (isinstance(path, str) and bool(_PATH.fullmatch(path))
+            and ".." not in path.split("/") and "//" not in path)
+
+
 def _json_ok(value) -> bool:
     try:
         json.dumps(value, allow_nan=False)
@@ -32,8 +38,7 @@ def _json_ok(value) -> bool:
 def validate_body(value: dict) -> None:
     scenario = value["scenario"]
     if (not isinstance(scenario, dict) or set(scenario) != {"path", "function"}
-            or not isinstance(scenario["path"], str) or not _PATH.fullmatch(scenario["path"])
-            or ".." in scenario["path"].split("/") or "//" in scenario["path"]
+            or not valid_module_path(scenario["path"])
             or not isinstance(scenario["function"], str) or not _IDENT.fullmatch(scenario["function"])
             or scenario["function"].startswith("__")):
         raise ValueError("scenario must be {path: <repo .py file>, function: <identifier>}")
@@ -54,7 +59,7 @@ def validate_body(value: dict) -> None:
             raise ValueError("raises must be an exception class name")
 
 
-def source_path(check: dict) -> str:
+def source_path(check: dict, decision: dict | None = None) -> str:
     return check["scenario"]["path"]
 
 
@@ -70,7 +75,8 @@ def _matches(expect: dict, result: dict) -> bool:
     return result.get("outcome") == "raised" and result.get("exception") == expect["raises"]
 
 
-def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
+def observe(repo: Path, sha: str, check: dict, timeout: float = 10, target: str | None = None) -> dict:
+    """`target` is accepted for the common adapter interface; this adapter's target is scenario.path."""
     from .. import harness, sandbox
     from ..contracts import validate_check
     from ..gitio import read_at, resolve_commit
@@ -135,7 +141,7 @@ def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
     return {"status": "PASS" if all(matched) else "FAIL", "results": results, "matched": matched, "error": None}
 
 
-def ordinary(repo: Path, sha: str, timeout: float):
+def ordinary(repo: Path, sha: str, timeout: float, target: str | None = None):
     return None  # no adapter-independent happy path exists for arbitrary functions
 
 

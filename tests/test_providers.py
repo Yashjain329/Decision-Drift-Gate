@@ -61,39 +61,89 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(providers.clean_answer("{}"), "{}")
 
 
-class AnthropicTests(unittest.TestCase):
-    def test_request_shape_and_text_join(self):
-        rec = Recorder(body={"content": [{"type": "text", "text": '{"a":'}, {"type": "tool_use"}, {"type": "text", "text": "1}"}]})
-        out = AnthropicApi("claude-x", SECRET, transport=rec).complete("PROMPT", {}, 12)
-        self.assertEqual(out, '{"a":1}')
-        url, headers, body, timeout = rec.calls[0]
-        self.assertEqual(url, "https://api.anthropic.com/v1/messages")
-        self.assertEqual(headers["x-api-key"], SECRET)
-        self.assertEqual(body["messages"][0]["content"], "PROMPT")
-        self.assertEqual((body["model"], timeout), ("claude-x", 12))
+try:  # optional extra [anthropic]; the tests drive the real SDK offline through a mock HTTP transport
+    import anthropic
+    import httpx2
+except ImportError:
+    anthropic = None
 
-    def test_status_codes_map_to_stable_codes_without_leaking_the_key(self):
-        for status, code in ((401, "provider_auth_failed"), (403, "provider_auth_failed"), (429, "provider_rate_limited"),
-                             (500, "provider_unavailable"), (503, "provider_unavailable"), (400, "provider_rejected")):
-            with self.assertRaises(ProviderError) as ctx:
-                AnthropicApi("m", SECRET, transport=Recorder(status)).complete("p", {}, 1)
-            self.assertEqual(ctx.exception.code, code)
-            self.assertNotIn(SECRET, str(ctx.exception))
 
-    def test_bad_responses(self):
-        for body in ({}, {"content": "x"}, {"content": []}, {"content": [{"type": "text", "text": ""}]}):
-            with self.assertRaises(ProviderError):
-                AnthropicApi("m", SECRET, transport=Recorder(body=body)).complete("p", {}, 1)
+def _message(content, stop_reason="end_turn"):
+    return {"id": "msg_1", "type": "message", "role": "assistant", "model": "claude-haiku-5-5", "content": content,
+            "stop_reason": stop_reason, "stop_sequence": None, "usage": {"input_tokens": 1, "output_tokens": 1}}
+
+
+class AnthropicConfigTests(unittest.TestCase):
+    def test_default_model_is_haiku_5_5_and_overridable(self):
+        p = providers.create("anthropic_api", env={"ANTHROPIC_API_KEY": SECRET})
+        self.assertEqual((p.name, p.model), ("anthropic_api", "claude-haiku-5-5"))
+        self.assertEqual(providers.create("anthropic_api", env={"ANTHROPIC_API_KEY": SECRET,
+                                                                "DDG_ANTHROPIC_MODEL": "claude-sonnet-5-5"}).model, "claude-sonnet-5-5")
+        self.assertEqual(providers.create("anthropic_api", model="claude-opus-5-5",
+                                          env={"ANTHROPIC_API_KEY": SECRET}).model, "claude-opus-5-5")
+        self.assertNotIn(SECRET, json.dumps(p.describe()))
+
+    def test_factory_requires_key(self):
+        with self.assertRaises(ProviderError) as ctx:
+            providers.create("anthropic_api", env={"DDG_MODEL": "m"})
+        self.assertEqual(ctx.exception.code, "provider_config")
+
+    def test_two_api_slots_pick_the_configured_key(self):
+        self.assertEqual(providers.create(env={"ANTHROPIC_API_KEY": SECRET}).name, "anthropic_api")
+        self.assertEqual(providers.create(env={"GEMINI_API_KEY": SECRET, "DDG_GEMINI_MODEL": "g",
+                                               "ANTHROPIC_API_KEY": SECRET}).name, "gemini_api")
+        self.assertEqual(providers.create(env={"DDG_PROVIDER": "anthropic_api", "GEMINI_API_KEY": SECRET,
+                                               "ANTHROPIC_API_KEY": SECRET}).name, "anthropic_api")
 
     def test_plain_http_to_a_remote_host_is_refused(self):
         with self.assertRaises(ProviderError):
-            AnthropicApi("m", SECRET, base_url="http://example.com", transport=Recorder()).complete("p", {}, 1)
+            AnthropicApi("m", SECRET, base_url="http://example.com").complete("p", {}, 1)
 
-    def test_factory_requires_key_and_model(self):
-        with self.assertRaises(ProviderError):
-            providers.create("anthropic_api", env={"DDG_MODEL": "m"})
-        with self.assertRaises(ProviderError):
-            providers.create("anthropic_api", env={"ANTHROPIC_API_KEY": SECRET})
+    def test_missing_sdk_is_a_config_error(self):
+        with patch.dict(sys.modules, {"anthropic": None}):
+            with self.assertRaises(ProviderError) as ctx:
+                AnthropicApi("m", SECRET).complete("p", {}, 1)
+        self.assertEqual(ctx.exception.code, "provider_config")
+
+
+@unittest.skipUnless(anthropic, "anthropic SDK not installed (optional [anthropic] extra)")
+class AnthropicSdkTests(unittest.TestCase):
+    def provider(self, status=200, body=None):
+        self.requests = []
+
+        def handler(request):
+            self.requests.append(request)
+            return httpx2.Response(status, json=body if body is not None else {"type": "error", "error": {"type": "x", "message": SECRET}})
+
+        client = anthropic.Anthropic(api_key=SECRET, max_retries=0,
+                                     http_client=anthropic.DefaultHttpxClient(transport=httpx2.MockTransport(handler)))
+        return AnthropicApi("claude-haiku-5-5", SECRET, client=client)
+
+    def test_request_shape_and_text_join_skip_thinking(self):
+        body = _message([{"type": "thinking", "thinking": "", "signature": "sig"},
+                         {"type": "text", "text": '{"a":'}, {"type": "text", "text": "1}"}])
+        self.assertEqual(self.provider(body=body).complete("PROMPT", {}, 12), '{"a":1}')
+        request = self.requests[0]
+        sent = json.loads(request.content)
+        self.assertEqual(str(request.url), "https://api.anthropic.com/v1/messages")
+        self.assertEqual(request.headers["x-api-key"], SECRET)
+        self.assertEqual((sent["model"], sent["max_tokens"]), ("claude-haiku-5-5", 16000))
+        self.assertEqual(sent["messages"], [{"role": "user", "content": "PROMPT"}])
+        self.assertNotIn("thinking", sent)  # Haiku 5.5 runs adaptive thinking by default
+
+    def test_status_codes_map_to_stable_codes_without_leaking_the_key(self):
+        for status, code in ((401, "provider_auth_failed"), (403, "provider_auth_failed"), (429, "provider_rate_limited"),
+                             (500, "provider_unavailable"), (529, "provider_unavailable"), (400, "provider_rejected")):
+            with self.subTest(status=status), self.assertRaises(ProviderError) as ctx:
+                self.provider(status).complete("p", {}, 1)
+            self.assertEqual(ctx.exception.code, code)
+            self.assertNotIn(SECRET, str(ctx.exception))
+
+    def test_refusal_truncation_and_empty_answers_are_errors(self):
+        for body in (_message([], "refusal"), _message([{"type": "text", "text": "{"}], "max_tokens"),
+                     _message([]), _message([{"type": "text", "text": "  "}])):
+            with self.subTest(stop=body["stop_reason"]), self.assertRaises(ProviderError):
+                self.provider(body=body).complete("p", {}, 1)
 
 
 class OpenAITests(unittest.TestCase):

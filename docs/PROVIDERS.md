@@ -2,12 +2,12 @@
 
 The AI step proposes **one check** from a decision. It is optional: manual and recorded proposals need no model. A developer still calibrates and approves every check, so the provider cannot weaken the gate. A weak, wrong or hostile model can only produce a draft that fails local validation.
 
-Pick a provider with `DDG_PROVIDER` or `ddg propose --provider NAME`. Pick the model with `DDG_MODEL` or `--model`. List the choices with `ddg providers`.
+Pick a provider with `DDG_PROVIDER` or `ddg propose --provider NAME`. Without either, DDG uses the API key you set: `GEMINI_API_KEY` selects `gemini_api`; otherwise `ANTHROPIC_API_KEY` selects `anthropic_api`. Pick the model with `DDG_MODEL` or `--model`. List the choices with `ddg providers`.
 
 | Provider | Uses | Needs | Notes |
 |---|---|---|---|
 | `gemini_api` (default) | Google Gemini API | `GEMINI_API_KEY`, `DDG_GEMINI_MODEL` (or `DDG_MODEL`), `pip install ".[ai]"` | The original provider. |
-| `anthropic_api` | Anthropic Messages API | `ANTHROPIC_API_KEY`, `DDG_MODEL` | `ANTHROPIC_BASE_URL` for a gateway. |
+| `anthropic_api` | Anthropic Messages API through the official `anthropic` SDK | `ANTHROPIC_API_KEY`, `pip install ".[anthropic]"`; model `DDG_MODEL` or `DDG_ANTHROPIC_MODEL`, default **Claude Haiku 5.5** (`claude-haiku-5-5`) | `ANTHROPIC_BASE_URL` for a gateway. No SDK retries; a refusal or a cut-off answer is a provider error, never a draft. |
 | `openai_api` | Chat Completions | `OPENAI_API_KEY`, `DDG_MODEL` | Also any OpenAI-compatible server: set `OPENAI_BASE_URL` (Ollama `http://localhost:11434/v1`, vLLM, LM Studio, LiteLLM, OpenRouter, Azure gateway). A key is optional only for a custom base URL. |
 | `bedrock` | Amazon Bedrock Converse | `DDG_MODEL` (model or inference-profile id), region (`DDG_AWS_REGION`, `AWS_REGION` or `AWS_DEFAULT_REGION`), and either `AWS_BEARER_TOKEN_BEDROCK` or `pip install ".[bedrock]"` with normal AWS credentials | With boto3 the usual AWS chain applies (profile, SSO, role). |
 | `claude_cli` | Claude Code subscription (`claude -p`) | `claude` on PATH and logged in | Runs with tools off, no settings, a one-line system prompt. About 500 input tokens per call. |

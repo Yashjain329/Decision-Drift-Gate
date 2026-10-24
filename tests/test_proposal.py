@@ -163,7 +163,7 @@ class ProposalTests(unittest.TestCase):
             release.set()
 
     def test_recorded_capture_requires_matching_content_inputs_and_provenance(self):
-        capture = wrap_draft(self.context, MANUAL, mode="live", model="gemini-3.8-flash")
+        capture = wrap_draft(self.context, MANUAL, mode="live", model="gemini-3.8-flash", sdk_version="test-sdk")
         capture["request_metadata"] = {"model": capture["model"], "input_digest": capture["input_digest"]}
         capture["provider_response"] = {"status": "DRAFT", "reason": "synthetic test capture"}
         body = {key: value for key, value in capture.items() if key != "draft_digest"}

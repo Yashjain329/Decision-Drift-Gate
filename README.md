@@ -28,6 +28,7 @@ Requirements: Python 3.10 or newer (declared in `pyproject.toml`; only 3.12 has 
 python -m pip install .            # core: standard library only
 python -m pip install "git+https://github.com/Yashjain329/Decision-Drift-Gate@v0.1.0"  # the tagged release, without a clone
 python -m pip install ".[ai]"      # adds the Gemini SDK (only for the gemini_api provider)
+python -m pip install ".[anthropic]" # adds the Anthropic SDK (only for the anthropic_api provider; default model Claude Haiku 5.5)
 python -m pip install ".[bedrock]" # adds boto3 (only for the bedrock provider with AWS credentials)
 ddg --help                         # same as: python -m ddg --help
 ```
@@ -58,7 +59,7 @@ Every command below is exercised by `tests/test_cli_real.py` on a repository wit
    ddg propose --repo <repo> --adapter python_function_v1 --mode manual --check check.json --out draft.json
    ```
 
-   For `python_job_client_v1` you may use `--mode recorded` (bundled capture) or `--mode live` with a model provider. `--revision <commit>` selects the commit where the new decision is active (default `HEAD`). An example `check.json` is in [tests/test_adapters.py](tests/test_adapters.py) (`CHECK`).
+   For `python_job_client_v1` you may use `--mode recorded` (bundled capture) or `--mode live` with a model provider. `--revision <commit>` selects the commit where the new decision is active (default `HEAD`). `--decision <id>` is needed only when several active decisions supersede others; otherwise DDG picks the one that does. `--check-id` names the new check (default: the next free `CHK-NNN`). For `python_job_client_v1`, the decision's `scope` must be the repository `.py` file that defines `submit_job`. An example `check.json` is in [tests/test_adapters.py](tests/test_adapters.py) (`CHECK`).
 
 4. **Validate.** Name three commits of your own history: one where the rule is broken, one where it holds, and one with a valid exception:
 
@@ -68,6 +69,8 @@ Every command below is exercised by `tests/test_cli_real.py` on a repository wit
    ```
 
    The check must fail on the bad commit and pass on the other two. Exit code 1 means not eligible.
+
+   Keep these commits, and the commit you proposed from, reachable on a branch or tag that CI fetches. A squash merge or rebase that drops them makes later runs INCOMPLETE, with the warning `Proposal source commit <sha> cannot be used`. To keep one, run `git tag ddg-src-CHK-001 <sha>` and `git push origin ddg-src-CHK-001`.
 
 5. **Approve.** `ddg approve --repo <repo> --draft draft.json --validation validation.json --reviewer <name> --reason <text>` writes three files under `.ddg/checks`, `.ddg/validations` and `.ddg/approvals` and prints their paths. It does not commit.
 
@@ -109,14 +112,14 @@ An adapter says what a check can observe. The id is part of the approval digest.
 
 | Adapter | What it checks | Proposal source |
 |---|---|---|
-| `python_job_client_v1` | `submit_job(service, payload, operation_id)` in `src/job_client.py` against a fake service that can fail after creating a job | Model (recorded or live, any provider) or manual |
+| `python_job_client_v1` | `submit_job(service, payload, operation_id)` in the file named by the decision's `scope` (for example `src/job_client.py`) against a fake service that can fail after creating a job | Model (recorded or live, any provider) or manual |
 | `python_function_v1` | One function in one Python module that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`: return value or exception type for given JSON arguments (up to 50 cases) | Manual only. Model proposals refuse this adapter |
 
 Both adapters run a single Python file that imports only pure standard-library modules: no `os`, `sys`, `subprocess`, `pathlib`, `io`, `tempfile`, network or process modules, and no `open`, `eval` or `exec`. See [architecture](docs/ARCHITECTURE.md).
 
 ## Model providers
 
-The model step is optional and only drafts a check; calibration and a human approval still decide whether it is used. Choose a provider with `DDG_PROVIDER` or `--provider`: `gemini_api` (default), `anthropic_api`, `openai_api` (also any OpenAI-compatible server through `OPENAI_BASE_URL`), `bedrock`, `claude_cli`, `codex_cli`, `custom_cli`. The CLI providers use your Claude Code or Codex subscription login instead of an API key. `ddg providers` lists them. Details, variables and limits: [docs/PROVIDERS.md](docs/PROVIDERS.md).
+The model step is optional and only drafts a check; calibration and a human approval still decide whether it is used. Choose a provider with `DDG_PROVIDER` or `--provider`: `gemini_api`, `anthropic_api` (default model Claude Haiku 5.5), `openai_api` (also any OpenAI-compatible server through `OPENAI_BASE_URL`), `bedrock`, `claude_cli`, `codex_cli`, `custom_cli`. With no provider set, DDG uses the API key you configured (`GEMINI_API_KEY`, else `ANTHROPIC_API_KEY`). The CLI providers use your Claude Code or Codex subscription login instead of an API key. `ddg providers` lists them. Details, variables and limits: [docs/PROVIDERS.md](docs/PROVIDERS.md).
 
 ## Reading a report
 
@@ -157,7 +160,7 @@ Earlier versions returned 2 for usage errors. Scripts that treated 2 as "error" 
 | `DDG_SANDBOX_IMAGE` | Container image. Default `python:3.12-slim` (a tag, not a digest). A custom image must be pinned as `name@sha256:...` unless `DDG_SANDBOX_ALLOW_UNPINNED=1` is also set. |
 | `DDG_ALLOW_UNVERIFIED_APPROVERS` | `1` lets a repository with no `.ddg/approvers.json` run; approvers are marked unverified. Never use it in CI. |
 | `DDG_PROVIDER`, `DDG_MODEL`, `DDG_PROVIDER_TIMEOUT` | Model provider, model name and per-call limit (1 to 600 s). See [providers](docs/PROVIDERS.md). |
-| `GEMINI_API_KEY`, `DDG_GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AWS_BEARER_TOKEN_BEDROCK`, `DDG_AWS_REGION`, `DDG_CLI_COMMAND` | Provider credentials and settings. Read from the environment or a local `.env` (current directory first). Executing approved checks never needs them. |
+| `GEMINI_API_KEY`, `DDG_GEMINI_MODEL`, `ANTHROPIC_API_KEY`, `DDG_ANTHROPIC_MODEL`, `ANTHROPIC_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `AWS_BEARER_TOKEN_BEDROCK`, `DDG_AWS_REGION`, `DDG_CLI_COMMAND` | Provider credentials and settings. Read from the environment or a local `.env` (current directory first). Executing approved checks never needs them. |
 
 ## Run the browser demo
 

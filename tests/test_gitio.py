@@ -41,10 +41,10 @@ class GitReadTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 read_at(repo, sha, "missing file.py")
             bad = resolve_commit(repo, demo["refs"]["calibration_bad"])
-            context = diff_at(repo, bad, sha)
+            context = diff_at(repo, bad, sha, "src/job_client.py")
             self.assertIn("submit_job", context)
             self.assertNotIn(".ddg/decisions", context)
-            policy_context = diff_at(repo, sha, resolve_commit(repo, demo["refs"]["missing_policy"]))
+            policy_context = diff_at(repo, sha, resolve_commit(repo, demo["refs"]["missing_policy"]), "src/job_client.py")
             self.assertNotIn(".ddg/decisions", policy_context)
 
     def test_git_failure_is_value_error(self):

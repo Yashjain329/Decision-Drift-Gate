@@ -2,13 +2,19 @@ import json
 import os
 import subprocess
 import copy
+from functools import partial
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from ddg.demo import build_demo
-from ddg.harness import FakeService, _small_worker_environment, observe, observe_happy_path
+from ddg import harness
+from ddg.harness import FakeService, _small_worker_environment
+
+# The demo repository keeps its job client at the decision scope src/job_client.py.
+observe = partial(harness.observe, path="src/job_client.py")
+observe_happy_path = partial(harness.observe_happy_path, path="src/job_client.py")
 
 
 CHECK = json.loads(Path("examples/manual_check.json").read_text(encoding="utf-8"))

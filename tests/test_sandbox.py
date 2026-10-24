@@ -1,4 +1,5 @@
 import os
+from functools import partial
 import subprocess
 import unittest
 from pathlib import Path
@@ -7,7 +8,10 @@ from unittest.mock import patch
 
 from ddg import sandbox
 from ddg.demo import build_demo
-from ddg.harness import _drive_worker, FakeService, observe
+from ddg import harness
+from ddg.harness import _drive_worker, FakeService
+
+observe = partial(harness.observe, path="src/job_client.py")  # the demo decision scope
 
 # Evades the static screen on purpose: the container, not the screen, must contain these.
 BUILTINS = "(lambda: 0).__globals__['__builtins__']"
@@ -24,7 +28,7 @@ def _commit(repo: Path, source: str) -> None:
 
 class CommandTests(unittest.TestCase):
     def test_container_command_is_locked_down(self):
-        argv = sandbox.container_argv("docker", "ddg-x", Path("/s"), Path("/w.py"))
+        argv = sandbox.container_argv("docker", "ddg-x", Path("/s"), Path("/w.py"), "job_client.py")
         joined = " ".join(argv)
         for flag in ("--network none", "--read-only", "--cap-drop ALL", "no-new-privileges",
                      "--pids-limit", "--memory", "--user 65534:65534", "noexec"):

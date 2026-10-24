@@ -130,7 +130,7 @@ def list_at(repo: Path, sha: str, prefix: str) -> list[str]:
     return sorted(paths)
 
 
-def diff_at(repo: Path, base_sha: str, head_sha: str, path: str = "src/job_client.py") -> str:
+def diff_at(repo: Path, base_sha: str, head_sha: str, path: str) -> str:
     """Return source-code context between two full commit ids, capped at DIFF_CAP_BYTES.
 
     The text is display context only (verdicts come from execution), so undecodable bytes are
