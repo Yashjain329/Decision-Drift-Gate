@@ -1,11 +1,14 @@
-"""Adapter for the synthetic job client: submit_job(service, payload, operation_id) -> job id."""
+"""Adapter for a job client: submit_job(service, payload, operation_id) -> job id.
+
+The module under test is the governing decision's `scope`, which must be a repo .py path
+(for example "src/job_client.py"). The scope is part of the approved input digest.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 NAME = "python_job_client_v1"
-SOURCE_PATH = "src/job_client.py"
 SCENARIOS = {"commit_then_503", "reject_then_503"}
 _OBSERVATION_FIELDS = {
     "status", "unique_jobs", "returned_job_exists", "returned_job_id", "submit_calls", "events", "error",
@@ -39,18 +42,32 @@ def validate_body(value: dict) -> None:
         raise ValueError("Both required assertion metrics must be present")
 
 
-def source_path(check: dict) -> str:
-    return SOURCE_PATH
+def target_path(decision: dict | None) -> str:
+    """The module under test: the decision scope, which must be a repo .py path."""
+    from .python_function import valid_module_path
+    scope = decision.get("scope") if isinstance(decision, dict) else None
+    if not valid_module_path(scope):
+        raise ValueError(f"{NAME} needs the decision scope to be the repo .py file that defines submit_job "
+                         f"(for example src/job_client.py); got {str(scope)[:120]!r}")
+    return scope
 
 
-def observe(repo: Path, sha: str, check: dict, timeout: float) -> dict:
+def source_path(check: dict, decision: dict | None = None) -> str:
+    return target_path(decision)
+
+
+def observe(repo: Path, sha: str, check: dict, timeout: float, target: str | None = None) -> dict:
     from ..harness import observe as run
-    return run(repo, sha, check, timeout=timeout)
+    if target is None:
+        raise ValueError(f"{NAME} needs the target module path (the decision scope)")
+    return run(repo, sha, check, timeout=timeout, path=target)
 
 
-def ordinary(repo: Path, sha: str, timeout: float) -> dict:
+def ordinary(repo: Path, sha: str, timeout: float, target: str | None = None) -> dict:
     from ..harness import observe_happy_path
-    return observe_happy_path(repo, sha, timeout=timeout)
+    if target is None:
+        raise ValueError(f"{NAME} needs the target module path (the decision scope)")
+    return observe_happy_path(repo, sha, timeout=timeout, path=target)
 
 
 def expected_case(case: str, observation: dict, check: dict) -> bool:

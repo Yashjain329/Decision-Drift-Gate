@@ -12,6 +12,7 @@ dependencies = []
 [project.optional-dependencies]
 ai = ["google-genai==2.28.0"]
 bedrock = ["boto3>=1.35"]
+anthropic = ["anthropic>=1,<2"]
 
 [project.scripts]
 ddg = "ddg:console_main"

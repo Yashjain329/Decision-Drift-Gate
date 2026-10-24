@@ -10,7 +10,7 @@ import sys
 import tempfile
 import threading
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .contracts import ADAPTER_VERSION, validate_check
@@ -207,12 +207,12 @@ def _external_import_error(source: str) -> str | None:
 _small_worker_environment = sandbox.small_environment
 
 
-def _execute(repo: Path, sha: str, scenario: str, timeout: float) -> dict:
+def _execute(repo: Path, sha: str, scenario: str, timeout: float, path: str) -> dict:
     if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or timeout <= 0:
         raise ValueError("timeout must be a positive number")
     try:
         pinned_sha = resolve_commit(Path(repo), sha)
-        source = read_at(Path(repo), pinned_sha, "src/job_client.py")
+        source = read_at(Path(repo), pinned_sha, path)
     except Exception as exc:
         return _error_observation(f"Unable to read pinned target module: {type(exc).__name__}")
     unsupported = _external_import_error(source)
@@ -221,7 +221,7 @@ def _execute(repo: Path, sha: str, scenario: str, timeout: float) -> dict:
 
     with tempfile.TemporaryDirectory(prefix="ddg-run-") as temp_name:
         temp_root = Path(temp_name).resolve()
-        module_path = (temp_root / "src" / "job_client.py").resolve()
+        module_path = (temp_root / "src" / PurePosixPath(path).name).resolve()
         if not module_path.is_relative_to(temp_root):
             return _error_observation("Snapshot path escaped its temporary root")
         module_path.parent.mkdir(parents=True)
@@ -248,10 +248,10 @@ def _execute(repo: Path, sha: str, scenario: str, timeout: float) -> dict:
         return _observe_run(service, result or {"op": "error", "error": "Worker produced no result"})
 
 
-def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
-    """Run a validated check against the module stored at one Git revision."""
+def observe(repo: Path, sha: str, check: dict, timeout: float = 10, *, path: str) -> dict:
+    """Run a validated check against the module at `path` stored at one Git revision."""
     checked = validate_check(check)
-    observation = _execute(Path(repo), sha, checked["scenario"], timeout)
+    observation = _execute(Path(repo), sha, checked["scenario"], timeout, path)
     if observation["status"] == "ERROR":
         return observation
     assertions_pass = all(
@@ -266,9 +266,9 @@ def observe(repo: Path, sha: str, check: dict, timeout: float = 10) -> dict:
     return observation
 
 
-def observe_happy_path(repo: Path, sha: str, timeout: float = 10) -> dict:
+def observe_happy_path(repo: Path, sha: str, timeout: float = 10, *, path: str) -> dict:
     """Observe ordinary successful submission against a fault-free service."""
-    observation = _execute(Path(repo), sha, "none", timeout)
+    observation = _execute(Path(repo), sha, "none", timeout, path)
     if observation["status"] == "ERROR":
         return observation
     completed = isinstance(observation["returned_job_id"], str) and observation["returned_job_exists"]

@@ -95,7 +95,9 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(nocheck.returncode, 3)
         job = run_cli("propose", "--repo", repo, "--mode", "manual", "--check", self.check_file,
                       "--out", state / "x.json")
-        self.assertEqual(job.returncode, 3, "job adapter needs src/job_client.py")
+        # The job adapter reads the decision scope (this repo's src/pricing.py), not a fixed path;
+        # drafting succeeds and calibration decides eligibility.
+        self.assertEqual(job.returncode, 0, job.stderr)
         proposal = run_cli("propose", "--repo", repo, "--adapter", ADAPTER, "--mode", "manual",
                            "--revision", self.good, "--check", self.check_file, "--out", self.draft)
         self.assertEqual(proposal.returncode, 0, proposal.stderr)

@@ -91,7 +91,7 @@ def resolve() -> str:
 
 
 def container_argv(runtime: str, name: str, source_dir: Path, worker: Path,
-                   module_name: str = "job_client.py") -> list[str]:
+                   module_name: str) -> list[str]:
     """Build the locked-down `run` command (pure function, unit tested)."""
     return [
         runtime, "run", "--rm", "-i", "--name", name,

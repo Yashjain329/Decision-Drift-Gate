@@ -222,7 +222,7 @@ class PromptInjectionTests(unittest.TestCase):
         old = decision("DEC-001", "superseded", rule="old rule")
         new = decision("DEC-002", "active", "DEC-001", rule=rule, exceptions=[exception])
         validate_decisions([old, new])
-        return {"old_decision": old, "new_decision": new, "source": "def f():\n    pass\n",
+        return {"check_id": "CHK-001", "old_decision": old, "new_decision": new, "source": "def f():\n    pass\n",
                 "adapter_version": contracts.ADAPTER_VERSION, "prompt_version": "p", "vocabulary": {}}
 
     def test_decision_text_only_appears_as_escaped_json_data(self):

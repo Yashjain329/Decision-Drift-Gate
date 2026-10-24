@@ -4,8 +4,9 @@ A provider turns one prompt into the model's raw text answer. Everything after t
 checks, exact-quote citation checks, calibration and human approval) is provider independent, so
 a weak or hostile model can at worst produce a draft that fails validation.
 
-Provider selection: DDG_PROVIDER (or the `--provider` flag), one of names(). DDG_MODEL selects the
-model; DDG_PROVIDER_TIMEOUT overrides the per-call time limit in seconds.
+Provider selection: DDG_PROVIDER (or the `--provider` flag), one of names(). Without either, the API key
+that is set picks the provider: GEMINI_API_KEY -> gemini_api, else ANTHROPIC_API_KEY -> anthropic_api.
+DDG_MODEL selects the model; DDG_PROVIDER_TIMEOUT overrides the per-call time limit in seconds.
 """
 
 from __future__ import annotations
@@ -78,12 +79,21 @@ def create(name: str | None = None, model: str | None = None,
     """Build the provider named by `name`, DDG_PROVIDER, or the default."""
     _load_builtin()
     env = os.environ if env is None else env
-    chosen = (name or env.get("DDG_PROVIDER") or DEFAULT_PROVIDER).strip().lower().replace("-", "_")
+    chosen = (name or env.get("DDG_PROVIDER") or _keyed_default(env)).strip().lower().replace("-", "_")
     factory = _FACTORIES.get(chosen)
     if factory is None:
         raise ProviderError("provider_config", f"Unknown provider {chosen!r}; choose one of {sorted(_FACTORIES)}")
     chosen_model = (model or env.get("DDG_MODEL") or "").strip() or None
     return factory(env, chosen_model)
+
+
+def _keyed_default(env: Mapping[str, str]) -> str:
+    """Two API slots: use whichever API key is configured (Gemini first, as before)."""
+    if (env.get("GEMINI_API_KEY") or "").strip():
+        return "gemini_api"
+    if (env.get("ANTHROPIC_API_KEY") or "").strip():
+        return "anthropic_api"
+    return DEFAULT_PROVIDER
 
 
 _loaded = False

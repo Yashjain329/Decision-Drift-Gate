@@ -147,7 +147,9 @@ def _expected_case(case: str, observation: dict, check: dict) -> bool:
     return adapters.get(check["adapter"]).expected_case(case, observation, check)
 
 
-def _calibration(repo: Path, check: dict, refs: dict) -> tuple[dict, dict, bool]:
+def _calibration(repo: Path, check: dict, refs: dict, decision: dict) -> tuple[dict, dict, bool]:
+    adapter = adapters.get(check["adapter"])
+    target = adapter.source_path(check, decision)
     cases: dict[str, dict] = {}
     hashes: dict[str, str] = {}
     eligible = True
@@ -158,7 +160,7 @@ def _calibration(repo: Path, check: dict, refs: dict) -> tuple[dict, dict, bool]
         sha = resolve_commit(repo, sha)
         hashes[case] = sha
         try:
-            observation = adapters.get(check["adapter"]).observe(repo, sha, check, 10)
+            observation = adapter.observe(repo, sha, check, 10, target)
         except Exception as exc:
             observation = {
                 "status": "ERROR", "unique_jobs": None, "returned_job_exists": None,
@@ -176,7 +178,7 @@ def validate_draft(repo: Path, draft: dict, refs: dict) -> dict:
     check, decision = _check_draft(repo, draft)
     if not isinstance(refs, dict):
         raise ValueError("Calibration refs must be an object")
-    cases, hashes, eligible = _calibration(repo, check, refs)
+    cases, hashes, eligible = _calibration(repo, check, refs, decision)
     return {
         "schema_version": 1,
         "check_id": check["id"],

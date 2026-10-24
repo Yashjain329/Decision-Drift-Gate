@@ -240,7 +240,7 @@ class Sha256Tests(unittest.TestCase):
                 resolve_commit(repo, "HEAD")
             for call in (lambda: gitio.read_at(repo, full, "src/pricing.py"),
                          lambda: gitio.list_at(repo, full, "src"),
-                         lambda: gitio.diff_at(repo, full, full),
+                         lambda: gitio.diff_at(repo, full, full, "src/pricing.py"),
                          lambda: compare(repo, "HEAD~1", "HEAD")):
                 with self.assertRaisesRegex(ValueError, "SHA-256"):
                     call()

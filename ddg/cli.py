@@ -12,7 +12,7 @@ from typing import Any
 
 from . import adapters, sandbox
 from .approval import approve, validate_draft
-from .contracts import ADAPTER_VERSION
+from .contracts import ADAPTER_VERSION, _record_id
 from .demo import build_demo
 from .gitio import resolve_commit
 from .proposal import load_context, propose
@@ -179,12 +179,13 @@ def _parser() -> argparse.ArgumentParser:
     proposal.add_argument("--repo", required=True, type=Path)
     proposal.add_argument("--adapter", default=ADAPTER_VERSION, choices=adapters.names(),
                           help="check adapter; any other than the default needs --mode manual --check FILE")
-    proposal.add_argument("--decision", default="DEC-002")
+    proposal.add_argument("--decision", help="decision id to check (default: the only active decision that supersedes another)")
+    proposal.add_argument("--check-id", help="id for the new check in live/recorded mode (default: the next free CHK-NNN)")
     proposal.add_argument("--revision")
     proposal.add_argument("--mode", choices=("live", "recorded", "manual"), default="live")
     proposal.add_argument("--capture", type=Path, default=DEFAULT_CAPTURE)
     proposal.add_argument("--check", type=Path, help="explicit JSON body required for manual mode")
-    proposal.add_argument("--provider", help="live mode: model provider (see `ddg providers`); default DDG_PROVIDER or gemini_api")
+    proposal.add_argument("--provider", help="live mode: model provider (see `ddg providers`); default DDG_PROVIDER, else the provider whose API key is set (GEMINI_API_KEY, then ANTHROPIC_API_KEY)")
     proposal.add_argument("--model", help="live mode: model name or id for the provider (default DDG_MODEL)")
     proposal.add_argument("--out", required=True, type=Path)
 
@@ -239,8 +240,12 @@ def _execute(args: argparse.Namespace) -> int:
 
     if args.command == "providers":
         from . import providers
-        print(_json_output({"providers": providers.names(), "default": providers.DEFAULT_PROVIDER,
-                            "select": "DDG_PROVIDER or --provider; model via DDG_MODEL or --model"}))
+        from .providers.anthropic_api import DEFAULT_MODEL as anthropic_model
+        print(_json_output({"providers": providers.names(),
+                            "default": (os.environ.get("DDG_PROVIDER") or "").strip() or providers._keyed_default(os.environ),
+                            "api_providers": {"gemini_api": "GEMINI_API_KEY + DDG_GEMINI_MODEL",
+                                              "anthropic_api": f"ANTHROPIC_API_KEY (model default {anthropic_model})"},
+                            "select": "DDG_PROVIDER or --provider, else the API key that is set; model via DDG_MODEL or --model"}))
         return 0
 
     repo = Path(args.repo).expanduser().resolve()
@@ -256,6 +261,9 @@ def _execute(args: argparse.Namespace) -> int:
         if args.adapter != ADAPTER_VERSION and (args.mode != "manual" or args.check is None):
             raise ValueError(f"Adapter {args.adapter} supports only --mode manual with --check FILE")
         context = load_context(repo, decision_id=args.decision, revision=revision, adapter=args.adapter)
+        if args.check_id:
+            _record_id(args.check_id, "CHK", "--check-id")
+            context["check_id"] = args.check_id
         local_env = Path.cwd() / ".env"  # provider settings: cwd first, then the install/source root
         context["env_file"] = local_env if local_env.is_file() else PROJECT_ROOT / ".env"
         if args.mode == "recorded":

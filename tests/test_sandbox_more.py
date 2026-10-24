@@ -6,6 +6,7 @@ Container classes skip with a visible reason when the runtime is missing.
 """
 
 import json
+from functools import partial
 import os
 import shutil
 import subprocess
@@ -18,7 +19,9 @@ from unittest.mock import patch
 
 from ddg import harness, sandbox
 from ddg.demo import build_demo
-from ddg.harness import FakeService, _drive_worker, observe
+from ddg.harness import FakeService, _drive_worker
+
+observe = partial(harness.observe, path="src/job_client.py")  # the demo decision scope
 
 BUILTINS = "(lambda: 0).__globals__['__builtins__']"
 SYS = BUILTINS + "['__im' + 'port__']('s' + 'ys')"
@@ -288,8 +291,8 @@ class ArgvPinTests(unittest.TestCase):
             sandbox.DEFAULT_IMAGE, "python", "/work/worker.py", "/work/src/m.py"])
 
     def test_podman_uses_the_same_flags(self):
-        docker = sandbox.container_argv("docker", "n", Path("/s"), Path("/w.py"))
-        podman = sandbox.container_argv("podman", "n", Path("/s"), Path("/w.py"))
+        docker = sandbox.container_argv("docker", "n", Path("/s"), Path("/w.py"), "m.py")
+        podman = sandbox.container_argv("podman", "n", Path("/s"), Path("/w.py"), "m.py")
         self.assertEqual(podman[0], "podman")
         self.assertEqual(podman[1:], docker[1:])
 

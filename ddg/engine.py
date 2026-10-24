@@ -11,11 +11,9 @@ from . import adapters, identity, sandbox
 from .approval import verify_bundle
 from .contracts import ADAPTER_VERSION, digest, validate_check, validate_decisions
 from .gitio import changed_paths_at, diff_at, list_at, read_at, resolve_commit
-from .harness import observe_happy_path
 from .proposal import input_digest, load_context, validate_citations
 
 RUNNER_TIMEOUT_SECONDS = 10.0
-_DEFAULT_SOURCE = "src/job_client.py"
 _VERDICTS = {
     ("PASS", "FAIL"): "VIOLATION_INTRODUCED",
     ("FAIL", "FAIL"): "PRE_EXISTING_FAILURE",
@@ -165,14 +163,18 @@ def _authority(repo: Path, base_sha: str, warnings: list[dict]) -> tuple[list[di
                 raise ValueError("Approved check is missing its validation or approval record")
             if not verify_bundle(check, decision, validation, approval):
                 raise ValueError("Approved check bundle digest or calibration evidence is invalid")
+            source_sha = str(validation.get("source_sha"))
             try:
-                inputs = load_context(repo, decision["id"], validation["source_sha"], check["adapter"])
+                inputs = load_context(repo, decision["id"], source_sha, check["adapter"])
                 inputs["old_decision"] = decisions[decision["supersedes"]]  # base's record, not the pinned one
                 inputs["new_decision"] = decision
                 inputs_ok = input_digest(inputs) == validation["input_digest"]
-            except (ValueError, KeyError, TypeError):
-                # Fail closed: e.g. a squashed/shallow history without the pinned source commit.
-                raise ValueError("Pinned proposal source commit or its records are unavailable (shallow or rewritten history?)")
+            except (ValueError, KeyError, TypeError) as exc:
+                # Fail closed, but say why: a missing commit (squash, rebase, unpushed branch, shallow clone)
+                # reads differently from missing decision records or an unreadable target module.
+                raise ValueError(f"Proposal source commit {source_sha[:12]} cannot be used: {str(exc) or type(exc).__name__}. "
+                                 "It must be reachable in this clone (not squashed, rebased away or shallow) "
+                                 "and hold both decision records and the target module.") from exc
             if not inputs_ok:  # binds the superseded predecessor and source the check was proposed from
                 raise ValueError("Approved proposal inputs differ from the repository record they were pinned to")
             try:
@@ -264,14 +266,7 @@ def compare(repo: Path, base: str, head: str) -> dict:
             "POLICY_STATE_UNAVAILABLE",
             "Could not determine whether head changed .ddg policy artifacts.",
         ))
-    try:
-        changed_lines = diff_at(repo, base_sha, head_sha)
-        diff_unavailable = False
-    except (ValueError, OSError, UnicodeError) as exc:
-        changed_lines = ""
-        diff_unavailable = True
-        warnings.append(_warning("DIFF_UNAVAILABLE", f"Could not read source diff: {type(exc).__name__}"))
-
+    diff_unavailable = False
     try:
         entries, authority_incomplete, active_decisions = _authority(repo, base_sha, warnings)
     except (OSError, ValueError, UnicodeError) as exc:
@@ -279,7 +274,7 @@ def compare(repo: Path, base: str, head: str) -> dict:
         entries = []
         active_decisions = []
         warnings.append(_warning("AUTHORITY_UNAVAILABLE", f"Could not load base policy artifacts: {type(exc).__name__}"))
-    diffs = {_DEFAULT_SOURCE: changed_lines}
+    diffs: dict[str, str] = {}
 
     def diff_for(path: str) -> str:
         nonlocal diff_unavailable
@@ -293,33 +288,40 @@ def compare(repo: Path, base: str, head: str) -> dict:
         return diffs[path]
 
     in_play: set[str] = set()
+    job_targets: set[str] = set()
     for entry in entries:
         authorized = entry.pop("_authorized", False)
         check = entry.get("check")
         if not authorized or not isinstance(check, dict) or not entry.get("approval") or not entry.get("validation"):
-            entry["diff"] = changed_lines
+            entry["diff"] = ""  # no trusted target module to diff
             continue
+        target = None
         try:
             adapter = adapters.get(check["adapter"])
             in_play.add(adapter.NAME)
-            entry["base"] = adapter.observe(repo, base_sha, check, RUNNER_TIMEOUT_SECONDS)
+            target = adapter.source_path(check, entry.get("decision"))
+            if adapter.NAME == ADAPTER_VERSION:
+                job_targets.add(target)
+            entry["base"] = adapter.observe(repo, base_sha, check, RUNNER_TIMEOUT_SECONDS, target)
         except Exception as exc:
             entry["base"] = _observation_error(f"Base execution failed: {type(exc).__name__}")
         try:
-            entry["head"] = adapters.get(check["adapter"]).observe(repo, head_sha, check, RUNNER_TIMEOUT_SECONDS)
+            entry["head"] = adapters.get(check["adapter"]).observe(repo, head_sha, check, RUNNER_TIMEOUT_SECONDS, target)
         except Exception as exc:
             entry["head"] = _observation_error(f"Head execution failed: {type(exc).__name__}")
         entry["verdict"] = _verdict(entry["base"], entry["head"])
-        entry["diff"] = diff_for(adapters.get(check["adapter"]).source_path(check))
+        entry["diff"] = diff_for(target) if target else ""
         if entry["verdict"] == "NOT_CHECKED":
             warnings.append(_warning("EXECUTION_ERROR", f"{entry['check_id']} could not be evaluated on both revisions."))
 
-    # The ordinary-test observation is defined only for the job adapter; with no authority it still runs.
+    # The ordinary-test observation is defined only for the job adapter, on an approved check's target module.
+    # ponytail: one target (the first by path); per-target ordinary tests if repos govern several job clients.
     ordinary_tests = {}
-    if not in_play or ADAPTER_VERSION in in_play:
+    if job_targets:
+        job_adapter, target = adapters.get(ADAPTER_VERSION), sorted(job_targets)[0]
         ordinary_tests = {
-            "base": observe_happy_path(repo, base_sha, timeout=RUNNER_TIMEOUT_SECONDS),
-            "head": observe_happy_path(repo, head_sha, timeout=RUNNER_TIMEOUT_SECONDS),
+            "base": job_adapter.ordinary(repo, base_sha, RUNNER_TIMEOUT_SECONDS, target),
+            "head": job_adapter.ordinary(repo, head_sha, RUNNER_TIMEOUT_SECONDS, target),
         }
     ordinary_error = any(item["status"] == "ERROR" for item in ordinary_tests.values())
     if ordinary_error:

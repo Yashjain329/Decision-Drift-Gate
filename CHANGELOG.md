@@ -4,7 +4,20 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Anthropic API as the second API provider.** `anthropic_api` now uses the official `anthropic` SDK (optional extra `[anthropic]`) and defaults to Claude Haiku 5.5 (`claude-haiku-5-5`); `DDG_MODEL` or `DDG_ANTHROPIC_MODEL` overrides it. With no `DDG_PROVIDER`, the configured key picks the provider: `GEMINI_API_KEY` first, then `ANTHROPIC_API_KEY`. `ddg providers` shows the resolved default. Refusals and answers cut off at `max_tokens` are provider errors. It is tested offline through the SDK with a mock transport; no live Anthropic call has been made yet.
+
+### Changed
+
+- **No fixed repository layout.** `python_job_client_v1` reads the module named by the governing decision's `scope` instead of a fixed `src/job_client.py`. The scope must be a repository `.py` path, and it is already bound by the approved input digest. Existing demo bundles are unchanged: their scope is `src/job_client.py`.
+- **Decision and check ids.** `ddg propose` no longer defaults to `DEC-002`. It uses the only active decision that supersedes another and asks for `--decision` when there are several. Model proposals use `--check-id` or the next free `CHK-NNN` instead of always `CHK-001`.
+- **Ordinary tests** (the no-fault job submission) run only for an approved job-client check's module, never against a hard-coded path.
+
+### Fixed
+
+- **Clearer missing-commit error.** When the commit a check was proposed from cannot be read, the run warning names the commit and the cause (missing commit, missing decision records, or missing target module). Before, every case said `shallow or rewritten history?`.
+- `tests/test_proposal.py` no longer needs the optional `google-genai` package installed.
 
 ## [0.1.0] - 2026-10-19
 
